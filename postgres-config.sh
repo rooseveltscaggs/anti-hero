@@ -1,6 +1,6 @@
 #!/bin/bash
 sudo apt update
-sudo apt install postgresql postgresql-contrib
+sudo apt -y install postgresql postgresql-contrib
 sudo systemctl start postgresql.service
 cd /var/lib/postgresql
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
