@@ -24,7 +24,7 @@ if [ $x == 1 ]; then
   sudo rm -rf env/
   sudo apt -y install python3.10-venv
   python -m venv env
-  source /env/bin/activate
+  source env/bin/activate
   pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-orchestrator.service /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
@@ -36,7 +36,7 @@ elif [ $x == 2 ]; then
   sudo rm -rf env/
   sudo apt -y install python3.10-venv
   python -m venv env
-  source /env/bin/activate
+  source env/bin/activate
   pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-server.service /etc/systemd/system/antihero-server.service
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-serverbg.service /etc/systemd/system/antihero-serverbg.service
