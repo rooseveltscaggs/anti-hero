@@ -21,13 +21,17 @@ read x
 
 if [ $x == 1 ]; then
   sudo cp -rf /home/"$USER"/anti-hero/antihero-orchestrator.service /etc/systemd/system/antihero.service
+  sudo systemctl daemon-reload
+  sudo systemctl start antihero-orchestrator
+  sudo systemctl enable antihero-orchestrator
 elif [ $x == 2 ]; then
   sudo cp -rf /home/"$USER"/anti-hero/antihero-server.service /etc/systemd/system/antihero.service
+  sudo cp -rf /home/"$USER"/anti-hero/antihero-serverbg.service /etc/systemd/system/antiherobg.service
+  sudo systemctl daemon-reload
+  sudo systemctl start antihero-server
+  sudo systemctl enable antihero-server
+  sudo systemctl start antihero-serverbg
+  sudo systemctl enable antihero-serverbg
 else
   echo "Selection is Invalid"
 fi
-
-sudo cp -rf /home/"$USER"/anti-hero/antihero.service /etc/systemd/system/antihero.service
-sudo systemctl daemon-reload
-sudo systemctl start antihero
-sudo systemctl enable antihero
