@@ -4,8 +4,8 @@ After=network.target
 [Service]
 User=rscaggs
 Group=www-data
-WorkingDirectory=/home/rscaggs/anti-hero/orchestrator
+WorkingDirectory=/users/rscaggs/anti-hero/orchestrator
 Environment="PATH=/rscaggs/anti-hero/orchestrator/env/bin"
-ExecStart=/home/rscaggs/anti-hero/orchestrator/env/bin/gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:80
+ExecStart=/users/rscaggs/anti-hero/orchestrator/env/bin/gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:80
 [Install]
 WantedBy=multi-user.target
