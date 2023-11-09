@@ -20,11 +20,22 @@ echo -n "Enter Server Type to Install: "
 read x
 
 if [ $x == 1 ]; then
+  cd /users/"$USER"/anti-hero/orchestrator
+  sudo rm -rf env/
+  sudo apt install python3.10-venv
+  python -m venv env
+  pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-orchestrator.service /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
   sudo systemctl enable antihero-orchestrator
+  sudo systemctl status antihero-orchestrator
 elif [ $x == 2 ]; then
+  cd /users/"$USER"/anti-hero/server
+  sudo rm -rf env/
+  sudo apt install python3.10-venv
+  python -m venv env
+  pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-server.service /etc/systemd/system/antihero-server.service
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-serverbg.service /etc/systemd/system/antihero-serverbg.service
   sudo systemctl daemon-reload
@@ -32,6 +43,8 @@ elif [ $x == 2 ]; then
   sudo systemctl enable antihero-server
   sudo systemctl start antihero-serverbg
   sudo systemctl enable antihero-serverbg
+  sudo systemctl status antihero-server
+  sudo systemctl status antihero-serverbg
 else
   echo "Selection is Invalid"
 fi
