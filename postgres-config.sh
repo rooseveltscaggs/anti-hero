@@ -22,7 +22,7 @@ read x
 if [ $x == 1 ]; then
   cd /users/"$USER"/anti-hero/orchestrator
   sudo rm -rf env/
-  sudo apt install python3.10-venv
+  sudo apt -y install python3.10-venv
   python -m venv env
   pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-orchestrator.service /etc/systemd/system/antihero-orchestrator.service
@@ -33,7 +33,7 @@ if [ $x == 1 ]; then
 elif [ $x == 2 ]; then
   cd /users/"$USER"/anti-hero/server
   sudo rm -rf env/
-  sudo apt install python3.10-venv
+  sudo apt -y install python3.10-venv
   python -m venv env
   pip install -r requirements.txt
   sudo cp -rf /users/"$USER"/anti-hero/config/antihero-server.service /etc/systemd/system/antihero-server.service
