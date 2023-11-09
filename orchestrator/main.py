@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 from database import db_session, engine
 import models
@@ -23,13 +24,32 @@ def update_server_status(server_id):
             server.status = json_data['status']
             server.last_updated = datetime.utcnow()
 
+@app.get("/status")
+def server_status():
+    return {"status": "Available", "is_orchestrator": True}
+
 def store_registry(key, value):
     registry_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name == key).first()
     if not registry_entry:
-        registry_entry = RegistryEntry(registry_name=key, string_value=value)
+        registry_entry = RegistryEntry(registry_name=key)
         db_session.add(registry_entry)
+
+    if value is None:
+        registry_entry.int_value = None
+        registry_entry.string_value = None
+        registry_entry.bool_value = None
+        registry_entry.datetime_value = None
     else:
-        registry_entry.string_value = value
+        if isinstance(value, int):
+            registry_entry.int_value = value
+        if isinstance(value, str):
+            registry_entry.string_value = value
+        if isinstance(value, bool):
+            registry_entry.bool_value = value
+        if isinstance(value, datetime):
+            registry_entry.datetime_value = value
+    
+
     db_session.commit()
     db_session.close()
     return value
@@ -37,23 +57,43 @@ def store_registry(key, value):
 def retrieve_registry(key, default=None):
     registry_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name == key).first()
     if registry_entry:
-        return registry_entry.string_value
-    else:
-        return default
+        if registry_entry.int_value is not None:
+            return registry_entry.int_value
+        
+        if registry_entry.string_value is not None:
+            return registry_entry.string_value
+        
+        if registry_entry.bool_value is not None:
+            return registry_entry.bool_value
+        
+        if registry_entry.datetime_value is not None:
+            return registry_entry.datetime_value
+        
+    return default
 
 
 @app.post("/autoregister")
-def auto_register(request: Request, hostname: Optional[str] = None, port: Optional[str] = "80"):
+def auto_register(request: Request, background_tasks: BackgroundTasks, hostname: Optional[str] = None, port: Optional[str] = "80"):
     host_ip = request.client.host
-    existing_server = db_session.query(Server).filter(Server.hostname==hostname, Server.ip_address==host_ip, Server.port==port).first()
-    if existing_server:
-        return existing_server
-    else:
+    server = db_session.query(Server).filter(Server.hostname==hostname, Server.ip_address==host_ip, Server.port==port).first()
+    if not server:
         server = Server(hostname=hostname, ip_address=host_ip, port=port)
         db_session.add(server)
         db_session.commit()
         # return {"host_ip": host_ip, "hostname": hostname, "server_id": server.id}
-        return server
+    servers = db_session.query(Server).all()
+    for server_obj in servers:
+        background_tasks.add_task(send_server_map, server_obj.id)
+        background_tasks.add_task(send_inventory, server_obj.id)
+    return server.as_dict()
+
+@app.put("/servers/sync")
+def sync_all_servers(background_tasks: BackgroundTasks):
+    servers = db_session.query(Server).all()
+    for server_obj in servers:
+        background_tasks.add_task(send_server_map, server_obj.id)
+        background_tasks.add_task(send_inventory, server_obj.id)
+    return {"Status": "Queued"}
 
 @app.get("/servers")
 def get_servers():
@@ -61,11 +101,34 @@ def get_servers():
     return servers
 
 @app.post("/servers")
-def create_server(host_ip: str, request: Request, hostname: Optional[str] = None, port: Optional[str] = "80"):
+def create_server(host_ip: str, request: Request, background_tasks: BackgroundTasks, hostname: Optional[str] = None, port: Optional[str] = "80"):
     server = Server(hostname=hostname, host_ip=host_ip, port=port)
     db_session.add(server)
     db_session.commit()
+    servers = db_session.query(Server).all()
+    for server_obj in servers:
+        background_tasks.add_task(send_server_map, server_obj.id)
     return {"host_ip": host_ip, "hostname": hostname, "server_id": server.id}
+
+
+@app.put("/pair")
+def pair_servers(server1_id: int, server2_id: int):
+    server1 = db_session.query(Server).filter(Server.id == server1_id).first()
+    server2 = db_session.query(Server).filter(Server.id == server2_id).first()
+    if server1 and server2:
+        server1_url = f'http://{server1.ip_address}:{server1.port}/partner?server_id={server2_id}'
+        response = requests.request("PUT", server1_url)
+        if response.ok:
+            server2_url = f'http://{server2.ip_address}:{server2.port}/partner?server_id={server1_id}'
+            response = requests.request("PUT", server2_url)
+            if response.ok:
+                server1.partner_id = server2_id
+                server2.partner_id = server1_id
+        db_session.commit()
+        db_session.close()
+        return {"Status": "Paired"}
+    else:
+        return {"Status": "Server(s) not found"}
 
 @app.get("/server/{server_id}")
 def get_server_status(server_id: int):
@@ -95,17 +158,57 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
 #    func.count(Table.column)).group_by(Table.column).all()
     locations = db_session.query(Inventory.location).filter(Inventory.id.in_(ids)).group_by(Inventory.location).all()
     for location in locations:
-        inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location).all()
-        background_tasks.add_task(transfer_inventory, inventory_ids, location, destination)
+        inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location[0], Inventory.id.in_(ids)).all()
+        background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
     
     return {"Status": "Queued"}
+
+@app.put("/failure")
+def report_failure(failed_server_id: int, backup_server_id: int):
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
+    if failed_server and backup_server:
+        if not backup_server.in_failure and not failed_server.in_backup:
+            failed_server.in_failure = True
+            backup_server.in_backup = True
+        else:
+            bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
+            return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
+    return {"Status": "Granted"}
+
+def send_server_map(server_id):
+    server = db_session.query(Server).filter(Server.id == server_id).first()
+    servers = db_session.query(Server).all()
+    server_list = []
+    for item in servers:
+        server_list.append(item.as_dict())
+    if server:
+        server_url = f'http://{server.ip_address}:{server.port}/servers'
+        response = requests.request("PUT", server_url, headers={}, json = server_list)
+        if response.ok:
+            server.last_updated = datetime.utcnow()
+    db_session.commit()
+
+def send_inventory(server_id):
+    inventory = db_session.query(Inventory).all()
+    server = db_session.query(Server).filter(Server.id == server_id).first()
+    inventory_list = []
+    for item in inventory:
+        inventory_list.append(item.as_dict())
+    if server:
+        server_url = f'http://{server.ip_address}:{server.port}/inventory/update'
+        response = requests.request("PUT", server_url, headers={}, json = inventory_list)
+        if response.ok:
+            server.last_updated = datetime.utcnow()
+    db_session.commit()
 
 def transfer_inventory(inventory_ids, current_location, new_location):
     request_time = datetime.utcnow()
     reserved_ids = []
     if current_location == 0:
-        for inv_id in inventory_ids:
-            res = Reservation(server_id=new_location, inventory_id=inv_id, reserve_datetime=request_time, expiry_time=request_time+datetime.timedelta(minutes=5), status="Requested")
+        for inventory in inventory_ids:
+            inv_id = inventory[0]
+            res = Reservation(server_id=new_location, inventory_id=inv_id, reserve_datetime=request_time, expiry_time=request_time+timedelta(minutes=5), status="Requested")
             db_session.add(res)
         db_session.commit()
         db_session.close()
@@ -114,7 +217,8 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         # Create reservation on Orchestrator
         # Wait 5 seconds (resolution period)
         # Begin transfer to new location
-        for inv_id in inventory_ids:
+        for inventory in inventory_ids:
+            inv_id = inventory[0]
             existing_res = db_session.query(Reservation).filter(Reservation.inventory_id == inv_id, Reservation.server_id != new_location, Reservation.status != 'Cancelled', Reservation.reserve_datetime <= request_time, Reservation.expiry_time > datetime.utcnow()).first()
             res = db_session.query(Reservation).filter(Reservation.inventory_id == inv_id, Reservation.server_id == new_location, Reservation.reserve_datetime == request_time).first()
             inv = db_session.query(Inventory).filter(Inventory.id == inv_id).first()
@@ -128,12 +232,12 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             
     else:
         curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
+        inv_ids = []
+        for inventory in inventory_ids:
+            inv_ids.append(inventory[0])
         if curr_serv:
-            curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/deactivate'
-            payload = {
-                "q" : inventory_ids
-            }
-            response = requests.request("PUT", curr_url, headers={}, params = payload)
+            curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/deactivate?new_location={new_location}'
+            response = requests.request("PUT", curr_url, headers={}, json = inv_ids)
 
             if response.ok:
                 # If the response status code is 200 (OK), parse the response as JSON
@@ -145,11 +249,8 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         # request inventory from current server
         # api route: /inventory/lock
 
-        curr_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/activate'
-        payload = {
-            "q" : inventory_ids
-        }
-        response = requests.request("PUT", curr_url, headers={}, params = payload)
+        dest_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/activate'
+        response = requests.request("PUT", dest_url, headers={}, json = reserved_ids)
 
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON

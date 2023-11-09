@@ -11,13 +11,31 @@ import requests
 import time
 from models import Server, Inventory, Reservation, RegistryEntry
 
+HEARTBEAT_TIMEOUT = 10
+HEARTBEAT_INTERVAL = 2
+
 def store_registry(key, value):
     registry_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name == key).first()
     if not registry_entry:
-        registry_entry = RegistryEntry(registry_name=key, string_value=value)
+        registry_entry = RegistryEntry(registry_name=key)
         db_session.add(registry_entry)
+
+    if value is None:
+        registry_entry.int_value = None
+        registry_entry.string_value = None
+        registry_entry.bool_value = None
+        registry_entry.datetime_value = None
     else:
-        registry_entry.string_value = value
+        if isinstance(value, int):
+            registry_entry.int_value = value
+        if isinstance(value, str):
+            registry_entry.string_value = value
+        if isinstance(value, bool):
+            registry_entry.bool_value = value
+        if isinstance(value, datetime):
+            registry_entry.datetime_value = value
+    
+
     db_session.commit()
     db_session.close()
     return value
@@ -25,13 +43,23 @@ def store_registry(key, value):
 def retrieve_registry(key, default=None):
     registry_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name == key).first()
     if registry_entry:
-        return registry_entry.string_value
-    else:
-        return default
+        if registry_entry.int_value is not None:
+            return registry_entry.int_value
+        
+        if registry_entry.string_value is not None:
+            return registry_entry.string_value
+        
+        if registry_entry.bool_value is not None:
+            return registry_entry.bool_value
+        
+        if registry_entry.datetime_value is not None:
+            return registry_entry.datetime_value
+        
+    return default
     
 def send_heartbeat():
     while True:
-        time.sleep(5)
+        time.sleep(HEARTBEAT_INTERVAL)
         status = retrieve_registry("Status")
         if status != 'Disabled':
             partner_id = retrieve_registry("Partner_ID")
@@ -45,12 +73,13 @@ def send_heartbeat():
 
 def request_authority():
     server_id = retrieve_registry("Server_ID")
+    partner_id = retrieve_registry("Partner_ID")
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
-    curr_url = f'http://{orc_ip}:{orc_port}/request-authority?server={server_id}'
+    curr_url = f'http://{orc_ip}:{orc_port}/failure?failed_server={partner_id}&backup_server={server_id}'
     response = requests.request("PUT", curr_url)
     if response.ok:
-        store_registry("In_Backup", "True")
+        store_registry("In_Backup", True)
         return True
     else:
         return False
@@ -65,18 +94,17 @@ def update_authority():
 def failure_detection():
     while True:
         print("Background failure detection is running...")
-        time.sleep(5)
+        time.sleep(HEARTBEAT_TIMEOUT)
         in_backup = retrieve_registry("In_Backup")
-        if not in_backup:
+        status = retrieve_registry("Status")
+        if not in_backup and status != "Disabled":
             # Check heartbeat
-            hb_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name=="Last_Heartbeat").first()
-            if hb_entry:
-                last_heartbeat = hb_entry.datetime_value
-                expiry = datetime.utcnow() - datetime.timedelta(seconds=15)
-                if last_heartbeat < expiry:
-                    authority = request_authority()
-                if authority:
-                    update_authority()
+            expiry = datetime.utcnow() - datetime.timedelta(seconds=HEARTBEAT_TIMEOUT)
+            last_heartbeat = retrieve_registry("Last_Heartbeat", None)
+            if last_heartbeat < expiry:
+                authority = request_authority()
+            if authority:
+                update_authority()
         db_session.close()
 
 

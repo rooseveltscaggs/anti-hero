@@ -35,20 +35,28 @@ class Server(Base):
     status = Column(String(), nullable=True)
     last_updated = Column(DateTime(), nullable=True)
     partner_id = Column(Integer(), nullable=True)
+    in_backup = Column(Boolean(), nullable=True)
+    in_failure = Column(Boolean(), nullable=True)
     description = Column(String(), nullable=True)
 
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       if self.last_updated is not None:
+          self_dict['last_updated'] = self.last_updated.isoformat()
+       return self_dict
 
 class Inventory(Base):
     __tablename__ = 'inventory'
     id = Column(Integer(), primary_key=True, nullable=False)
     section = Column(String(), nullable=True)
+    row = Column(String(), nullable=True)
     seat = Column(String(), nullable=True)
     desirability = Column(Integer(), nullable=True)
     location = Column(Integer(), nullable=True)
+    price = Column(Integer(), nullable=True)
     availability = Column(String(), nullable=True)
     description = Column(String(), nullable=True)
+    transaction_id = Column(String(), nullable=True)
     on_backup = Column(Boolean(), nullable=True)
     is_dirty = Column(Boolean(), nullable=True)
 
@@ -75,6 +83,8 @@ class Reservation(Base):
     reserve_datetime = Column(DateTime(), nullable=True)
     expiry_time = Column(DateTime(), nullable=True)
     status = Column(String(), nullable=True)
+    global_transaction_id = Column(String(), nullable=True)
+    forwarded = Column(Boolean(), nullable=True)
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
