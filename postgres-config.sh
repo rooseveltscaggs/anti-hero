@@ -20,13 +20,13 @@ echo -n "Enter Server Type to Install: "
 read x
 
 if [ $x == 1 ]; then
-  sudo cp -rf /users/"$USER"/anti-hero/antihero-orchestrator.service /etc/systemd/system/antihero.service
+  sudo cp -rf /users/"$USER"/anti-hero/config/antihero-orchestrator.service /etc/systemd/system/antihero.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
   sudo systemctl enable antihero-orchestrator
 elif [ $x == 2 ]; then
-  sudo cp -rf /users/"$USER"/anti-hero/antihero-server.service /etc/systemd/system/antihero.service
-  sudo cp -rf /users/"$USER"/anti-hero/antihero-serverbg.service /etc/systemd/system/antiherobg.service
+  sudo cp -rf /users/"$USER"/anti-hero/config/antihero-server.service /etc/systemd/system/antihero.service
+  sudo cp -rf /users/"$USER"/anti-hero/config/antihero-serverbg.service /etc/systemd/system/antiherobg.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-server
   sudo systemctl enable antihero-server
