@@ -1,5 +1,5 @@
 [Unit]
-Description=Uvicorn instance to serve FastAPI app Anti-Hero
+Description=Uvicorn instance to serve FastAPI app Anti-Hero orchestrator
 After=network.target
 [Service]
 User=rscaggs
