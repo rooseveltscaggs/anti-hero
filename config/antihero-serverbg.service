@@ -4,7 +4,7 @@ After=network.target
 [Service]
 User=rscaggs
 Group=www-data
-WorkingDirectory=/users/rscaggs/anti-hero/server
+WorkingDirectory=/home/rscaggs/anti-hero/server
 Environment="PATH=/rscaggs/anti-hero/server/env/bin"
 ExecStart=/usr/bin/python3 worker.py
 [Install]

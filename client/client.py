@@ -58,18 +58,14 @@ def main_menu():
     print("1) Re-Download Server Map")
     # In Progress
     print("2) Register New Server")
-    
-    
-    print("2) Send Request(s)")
-    # Not Critical
-    print("3) Change Orchestrator")
-    # Needed But Not Start
-    print("4) Transfer Inventory")
-    print("5) Auto-Register New Server")
-    print("6) Manually Register New Server")
-    print("7) View/Search Inventory")
-    # Enable, Disable, Pair
-    print("8) Server Options")
+    print("3) Transfer Inventory")
+    print("4) Sync Inventory")
+    print("5) Re-Download Inventory Map")
+    print("6) Pair Servers")
+    print("7) Enable Server")
+    print("8) Disable Server")
+    print("9) View/Search Inventory")
+    print("10) Send Automated Requests")
     print("\n")
     return input("Enter the number of an option above: ")
 
@@ -286,16 +282,16 @@ if __name__ == "__main__":
                 sync_inventory()
 
             case "5":
-                move_inventory()
+                download_inventory_map()
 
             case "6":
-                move_inventory()
+                pair_servers()
 
             case "7":
-                move_inventory()
+                enable_server()
             
             case "8":
-                move_inventory()
+                disable_server()
             
             case _:
                 print("Error: Selection did not match any options")
