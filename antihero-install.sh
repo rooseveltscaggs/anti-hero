@@ -1,5 +1,5 @@
 #!/bin/bash
-user=$(whoami)
+USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
 sudo apt update
@@ -29,7 +29,7 @@ read x
 if [ $x == 1 ]; then
   cd "$WORKDIR/orchestrator"
   sudo rm -rf env/
-  python -m venv env
+  python3 -m venv env
   source env/bin/activate
   pip install -r requirements.txt
   sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
@@ -40,7 +40,7 @@ if [ $x == 1 ]; then
 elif [ $x == 2 ]; then
   cd "$WORKDIR/server"
   sudo rm -rf env/
-  python -m venv env
+  python3 -m venv env
   source env/bin/activate
   pip install -r requirements.txt
   sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
