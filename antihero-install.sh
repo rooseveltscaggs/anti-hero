@@ -13,7 +13,8 @@ sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
 sudo ufw allow 5432/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 8000/tcp
-echo $WORKDIR
+echo "Work directory:"
+echo "$WORKDIR"
 sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
 sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
