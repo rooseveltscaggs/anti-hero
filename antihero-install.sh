@@ -1,7 +1,7 @@
 #!/bin/bash
 user=$(whoami)
 # /Users/rscaggs/git/anti-hero
-workdir=$(pwd)
+WORKDIR=$(pwd)
 sudo apt update
 sudo apt -y install postgresql postgresql-contrib
 sudo apt -y install python3.10-venv
