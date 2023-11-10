@@ -31,7 +31,7 @@ if [ $x == 1 ]; then
   # sudo rm -rf env/
   # python3 -m venv env
   # source env/bin/activate
-  pip install -r requirements.txt
+  # pip install -r requirements.txt
   sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
@@ -42,7 +42,7 @@ elif [ $x == 2 ]; then
   # sudo rm -rf env/
   # python3 -m venv env
   # source env/bin/activate
-  pip install -r requirements.txt
+  # pip install -r requirements.txt
   sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
   sudo cp -rf "$WORKDIR/config/antihero-serverbg.service" /etc/systemd/system/antihero-serverbg.service
   sudo systemctl daemon-reload
