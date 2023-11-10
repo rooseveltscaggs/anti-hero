@@ -13,8 +13,8 @@ sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
 sudo ufw allow 5432/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 8000/tcp
-sudo cp -rf "$WORKDIR"/config/postgresql.conf /etc/postgresql/14/main/postgresql.conf
-sudo cp -rf "$WORKDIR"/config/pg_hba.conf /etc/postgresql/14/main/pg_hba.conf
+sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
+sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
 
 echo "-- Server Types --"
@@ -25,24 +25,24 @@ echo -n "Enter Server Type to Install: "
 read x
 
 if [ $x == 1 ]; then
-  cd "$WORKDIR"/orchestrator
+  cd "$WORKDIR/orchestrator"
   sudo rm -rf env/
   python -m venv env
   source env/bin/activate
   pip install -r requirements.txt
-  sudo cp -rf "$WORKDIR"/config/antihero-orchestrator.service /etc/systemd/system/antihero-orchestrator.service
+  sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
   sudo systemctl enable antihero-orchestrator
   sudo systemctl status antihero-orchestrator
 elif [ $x == 2 ]; then
-  cd "$WORKDIR"/server
+  cd "$WORKDIR/server"
   sudo rm -rf env/
   python -m venv env
   source env/bin/activate
   pip install -r requirements.txt
-  sudo cp -rf "$WORKDIR"/config/antihero-server.service /etc/systemd/system/antihero-server.service
-  sudo cp -rf "$WORKDIR"/config/antihero-serverbg.service /etc/systemd/system/antihero-serverbg.service
+  sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
+  sudo cp -rf "$WORKDIR/config/antihero-serverbg.service" /etc/systemd/system/antihero-serverbg.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-server
   sudo systemctl enable antihero-server
