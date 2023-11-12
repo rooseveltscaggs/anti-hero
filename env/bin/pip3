@@ -1,4 +1,4 @@
-#!/Users/rscaggs/git/anti-hero/env/bin/python3.9
+#!/Users/rscaggs/git/anti-hero/env/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys

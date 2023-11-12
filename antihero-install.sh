@@ -4,6 +4,7 @@ USER=$(whoami)
 WORKDIR=$(pwd)
 old_text="TEXTDIR"
 sudo apt update
+sudo apt -y install python3.10
 sudo apt -y install postgresql postgresql-contrib
 sudo apt -y install python3.10-venv
 sudo apt -y install python3-pip
@@ -29,7 +30,7 @@ read x
 
 cd "$WORKDIR"
 sudo rm -rf env/
-python3 -m venv env
+python3.10 -m venv env
 source env/bin/activate
 env/bin/pip install -r "$WORKDIR/config/requirements.txt"
 
