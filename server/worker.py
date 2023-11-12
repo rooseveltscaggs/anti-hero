@@ -2,7 +2,7 @@ import threading
 import time
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import socket
 from database import db_session, engine
 import models
@@ -98,7 +98,7 @@ def failure_detection():
         status = retrieve_registry("Status")
         if not in_backup and status != "Disabled":
             # Check heartbeat
-            expiry = datetime.utcnow() - datetime.timedelta(seconds=HEARTBEAT_TIMEOUT)
+            expiry = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT)
             last_heartbeat = retrieve_registry("Last_Heartbeat", None)
             if last_heartbeat < expiry:
                 authority = request_authority()
