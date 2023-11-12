@@ -1,9 +1,10 @@
 #!/bin/bash
 
 echo "----- Anti-Hero Distributed System Installer -----"
-echo "-- Server Types --"
+echo "-- Node Types --"
 echo "1) Orchestrator"
 echo "2) Server"
+echo "3) Client"
 
 echo -n "Enter Server Type to Install: "
 read x
@@ -57,6 +58,11 @@ elif [ $x == 2 ]; then
   sudo systemctl enable antihero-serverbg
   sudo systemctl status antihero-server
   sudo systemctl status antihero-serverbg
+elif [ $x == 3 ]; then
+  cd "$WORKDIR"
+  echo "Dependency installs complete!"
+  echo "Run the command 'source env/bin/activate' to activate the virtualenv"
+  echo "Then run 'python client/client.py' to start the client"
 else
   echo "Selection is Invalid"
 fi
