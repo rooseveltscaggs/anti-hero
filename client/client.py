@@ -293,6 +293,12 @@ if __name__ == "__main__":
             case "8":
                 disable_server()
             
+            case "9":
+                view_search_inventory()
+            
+            case "10":
+                send_requests()
+            
             case _:
                 print("Error: Selection did not match any options")
         input("\nPress Enter to Continue...")
