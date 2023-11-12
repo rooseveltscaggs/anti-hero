@@ -35,7 +35,7 @@ env/bin/pip install -r "$WORKDIR/config/requirements.txt"
 
 if [ $x == 1 ]; then
   cd "$WORKDIR/orchestrator"
-  sed "s|$old_text|$WORKDIR|" "config/antihero-orchestrator.service.template" > "$WORKDIR/config/antihero-orchestrator.service"
+  sed "s|$old_text|$WORKDIR|" "$WORKDIR/config/antihero-orchestrator.service.template" > "$WORKDIR/config/antihero-orchestrator.service"
   sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
@@ -43,8 +43,8 @@ if [ $x == 1 ]; then
   sudo systemctl status antihero-orchestrator
 elif [ $x == 2 ]; then
   cd "$WORKDIR/server"
-  sed "s|$old_text|$WORKDIR|" "config/antihero-server.service.template" > "$WORKDIR/config/antihero-server.service"
-  sed "s|$old_text|$WORKDIR|" "config/antihero-serverbg.service.template" > "$WORKDIR/config/antihero-serverbg.service"
+  sed "s|$old_text|$WORKDIR|" "$WORKDIR/config/antihero-server.service.template" > "$WORKDIR/config/antihero-server.service"
+  sed "s|$old_text|$WORKDIR|" "$WORKDIR/config/antihero-serverbg.service.template" > "$WORKDIR/config/antihero-serverbg.service"
   sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
   sudo cp -rf "$WORKDIR/config/antihero-serverbg.service" /etc/systemd/system/antihero-serverbg.service
   sudo systemctl daemon-reload
