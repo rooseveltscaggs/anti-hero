@@ -27,12 +27,14 @@ echo "2) Server"
 echo -n "Enter Server Type to Install: "
 read x
 
+cd "$WORKDIR"
+sudo rm -rf env/
+python3 -m venv env
+source env/bin/activate
+env/bin/pip install -r "$WORKDIR/config/requirements.txt"
+
 if [ $x == 1 ]; then
   cd "$WORKDIR/orchestrator"
-  # sudo rm -rf env/
-  # python3 -m venv env
-  # source env/bin/activate
-  # pip install -r requirements.txt
   sed "s|$old_text|$WORKDIR|" "config/antihero-orchestrator.service.template" > "$WORKDIR/config/antihero-orchestrator.service"
   sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
@@ -41,10 +43,6 @@ if [ $x == 1 ]; then
   sudo systemctl status antihero-orchestrator
 elif [ $x == 2 ]; then
   cd "$WORKDIR/server"
-  # sudo rm -rf env/
-  # python3 -m venv env
-  # source env/bin/activate
-  # pip install -r requirements.txt
   sed "s|$old_text|$WORKDIR|" "config/antihero-server.service.template" > "$WORKDIR/config/antihero-server.service"
   sed "s|$old_text|$WORKDIR|" "config/antihero-serverbg.service.template" > "$WORKDIR/config/antihero-serverbg.service"
   sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
