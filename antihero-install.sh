@@ -1,4 +1,13 @@
 #!/bin/bash
+
+echo "----- Anti-Hero Distributed System Installer -----"
+echo "-- Server Types --"
+echo "1) Orchestrator"
+echo "2) Server"
+
+echo -n "Enter Server Type to Install: "
+read x
+
 USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
@@ -17,16 +26,9 @@ sudo ufw allow 80/tcp
 sudo ufw allow 8000/tcp
 # echo "Work directory:"
 # echo "$WORKDIR"
-sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
+# sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
 sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
-
-echo "-- Server Types --"
-echo "1) Orchestrator"
-echo "2) Server"
-
-echo -n "Enter Server Type to Install: "
-read x
 
 cd "$WORKDIR"
 sudo rm -rf env/
