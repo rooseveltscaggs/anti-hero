@@ -2,6 +2,7 @@
 USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
+old_text="TEXTDIR"
 sudo apt update
 sudo apt -y install postgresql postgresql-contrib
 sudo apt -y install python3.10-venv
@@ -13,8 +14,8 @@ sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
 sudo ufw allow 5432/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 8000/tcp
-echo "Work directory:"
-echo "$WORKDIR"
+# echo "Work directory:"
+# echo "$WORKDIR"
 sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
 sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
@@ -32,6 +33,7 @@ if [ $x == 1 ]; then
   # python3 -m venv env
   # source env/bin/activate
   # pip install -r requirements.txt
+  sed "s|$old_text|$WORKDIR|" "config/antihero-orchestrator.service.template" > "$WORKDIR/config/antihero-orchestrator.service"
   sudo cp -rf "$WORKDIR/config/antihero-orchestrator.service" /etc/systemd/system/antihero-orchestrator.service
   sudo systemctl daemon-reload
   sudo systemctl start antihero-orchestrator
@@ -43,6 +45,8 @@ elif [ $x == 2 ]; then
   # python3 -m venv env
   # source env/bin/activate
   # pip install -r requirements.txt
+  sed "s|$old_text|$WORKDIR|" "config/antihero-server.service.template" > "$WORKDIR/config/antihero-server.service"
+  sed "s|$old_text|$WORKDIR|" "config/antihero-serverbg.service.template" > "$WORKDIR/config/antihero-serverbg.service"
   sudo cp -rf "$WORKDIR/config/antihero-server.service" /etc/systemd/system/antihero-server.service
   sudo cp -rf "$WORKDIR/config/antihero-serverbg.service" /etc/systemd/system/antihero-serverbg.service
   sudo systemctl daemon-reload
