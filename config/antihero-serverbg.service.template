@@ -6,6 +6,6 @@ User=rscaggs
 Group=www-data
 WorkingDirectory=TEXTDIR/server
 Environment="PATH=/rscaggs/anti-hero/env/bin"
-ExecStart=/usr/bin/python3 worker.py
+ExecStart=TEXTDIR/env/bin/python3 worker.py
 [Install]
 WantedBy=multi-user.target
