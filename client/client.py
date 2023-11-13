@@ -185,7 +185,7 @@ def view_search_inventory():
     print('\n-- Inventory Preview --')
     preview_len = max(0, len(INVENTORY_MAP))
     for i in range (0, preview_len):
-        seat = INVENTORY_MAP[i]
+        seat = INVENTORY_MAP[str(i)]
         inv_summary = f'Section {seat["section"]}) Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
     while True:
