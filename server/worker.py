@@ -99,7 +99,7 @@ def failure_detection():
         if not in_backup and status != "Disabled":
             # Check heartbeat
             expiry = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT)
-            last_heartbeat = retrieve_registry("Last_Heartbeat", None)
+            last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
             if last_heartbeat < expiry:
                 authority = request_authority()
             if authority:
