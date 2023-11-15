@@ -102,8 +102,8 @@ def failure_detection():
             last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
             if last_heartbeat < expiry:
                 authority = request_authority()
-            if authority:
-                update_authority()
+                if authority:
+                    update_authority()
         db_session.close()
 
 
