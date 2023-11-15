@@ -95,15 +95,15 @@ def make_request():
 
 def transfer_inventory():
     ids = []
-    range_string = input("Enter a range of inventory ids (e.g.: \"1-8, 11, 17\"): ")
+    range_string = input("Enter an inclusive range of inventory ids (e.g.: \"1-8, 11, 17\"): ")
     range_list = range_string.split(",")
     for entry in range_list:
         # create a list that is range and add to ids
         if "-" in entry:
-            range = entry.split("-")
-            begin = int(range[0])
-            end = int(range[1])
-            for i in range (begin, end):
+            range_arr = entry.split("-")
+            begin = int(range_arr[0])
+            end = int(range_arr[1])
+            for i in range(begin, end+1):
                 ids.append(i)
         else:
             # add single number to ids
@@ -182,12 +182,13 @@ def disable_server():
 
 def view_search_inventory():
     download_inventory_map()
-    print('\n-- Inventory Preview --')
-    preview_len = max(0, len(INVENTORY_MAP))
-    for i in range (0, preview_len):
-        seat = INVENTORY_MAP[str(i)]
-        inv_summary = f'Section {seat["section"]}) Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
-        print(inv_summary)
+    print(INVENTORY_MAP)
+    # print('\n-- Inventory Preview --')
+    # preview_len = max(0, len(INVENTORY_MAP))
+    # for i in range (0, preview_len):
+    #     seat = INVENTORY_MAP[str(i)]
+    #     inv_summary = f'Section {seat["section"]}) Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
+    #     print(inv_summary)
     while True:
         seat_id = input("Enter an inventory id for details: ")
         seat = INVENTORY_MAP[int(seat_id)]
@@ -205,7 +206,10 @@ def send_requests():
     while True:
         primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
         backup_url = f'http://{backup["ip_address"]}:{backup["port"]}/inventory/{inv_id}'
-        response = requests.get(primary_url)
+        try:
+            response = requests.get(primary_url)
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
             json_data = response.json()
@@ -214,7 +218,10 @@ def send_requests():
         else:
             print("Bad response from primary, attempting to contact backup...")
             for i in range(0, 10):
-                backup_resp = requests.get(backup_url)
+                try:
+                    backup_resp = requests.get(backup_url)
+                except requests.exceptions.RequestException as e:
+                    print(f"Error: {e}")
                 if backup_resp.ok:
                     json_data = backup_resp.json()
                     print("Received data from backup: ")
@@ -268,6 +275,7 @@ if __name__ == "__main__":
         # Choose request mode: continuous or set number of requests
         # Enter start date/time (UTC)
         # Choose inventory to request: Random, Choose by Location, Choose by Section, Choose by Desirability
+        
         match option:
             case "1":
                 download_server_map()
@@ -301,4 +309,43 @@ if __name__ == "__main__":
             
             case _:
                 print("Error: Selection did not match any options")
+        
+        # Recoverable
+
+        # try:
+        #     match option:
+        #         case "1":
+        #             download_server_map()
+
+        #         case "2":
+        #             register_new_server()
+
+        #         case "3":
+        #             transfer_inventory()
+
+        #         case "4":
+        #             sync_inventory()
+
+        #         case "5":
+        #             download_inventory_map()
+
+        #         case "6":
+        #             pair_servers()
+
+        #         case "7":
+        #             enable_server()
+                
+        #         case "8":
+        #             disable_server()
+                
+        #         case "9":
+        #             view_search_inventory()
+                
+        #         case "10":
+        #             send_requests()
+                
+        #         case _:
+        #             print("Error: Selection did not match any options")
+        # except Exception as error:
+        #     print("An exception occurred:", error) 
         input("\nPress Enter to Continue...")
