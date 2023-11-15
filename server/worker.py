@@ -97,7 +97,7 @@ def request_authority():
         print ("Timeout Error:",errt)
     except requests.exceptions.RequestException as err:
         print ("Oops: Something Else",err)
-        
+
     if response.ok:
         store_registry("In_Backup", True)
         return True
@@ -147,6 +147,6 @@ worker_thread2.start()
 try:
     while True:
         print("Main program is running...")
-        time.sleep(2)
+        time.sleep(60)
 except KeyboardInterrupt:
     print("Exiting...")
