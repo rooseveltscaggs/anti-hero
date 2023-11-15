@@ -65,18 +65,39 @@ def send_heartbeat():
             if partner_id:
                 partner = db_session.query(Server).filter(Server.id == partner_id).first()
                 print("Sending heartbeat")
-                url = f'http://{partner.ip_address}:{partner.port}/heartbeat'
-                requests.request("PUT", url)
+                try:
+                    url = f'http://{partner.ip_address}:{partner.port}/heartbeat'
+                    requests.request("PUT", url)
+                except requests.exceptions.HTTPError as errh:
+                    print ("Http Error:",errh)
+                except requests.exceptions.ConnectionError as errc:
+                    print ("Error Connecting:",errc)
+                except requests.exceptions.Timeout as errt:
+                    print ("Timeout Error:",errt)
+                except requests.exceptions.RequestException as err:
+                    print ("Oops: Something Else",err)
             else:
                 print("No partner found")
 
 def request_authority():
+    print("Failure detected! Requesting authority from Orchestrator")
     server_id = retrieve_registry("Server_ID")
     partner_id = retrieve_registry("Partner_ID")
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     curr_url = f'http://{orc_ip}:{orc_port}/failure?failed_server={partner_id}&backup_server={server_id}'
-    response = requests.request("PUT", curr_url)
+    
+    try:
+        response = requests.request("PUT", curr_url)
+    except requests.exceptions.HTTPError as errh:
+        print ("Http Error:",errh)
+    except requests.exceptions.ConnectionError as errc:
+        print ("Error Connecting:",errc)
+    except requests.exceptions.Timeout as errt:
+        print ("Timeout Error:",errt)
+    except requests.exceptions.RequestException as err:
+        print ("Oops: Something Else",err)
+        
     if response.ok:
         store_registry("In_Backup", True)
         return True
@@ -91,9 +112,10 @@ def update_authority():
     return True
 
 def failure_detection():
+    print("Background failure detection is running...")
     while True:
-        print("Background failure detection is running...")
         time.sleep(HEARTBEAT_TIMEOUT)
+        print("Checking for timeout")
         in_backup = retrieve_registry("In_Backup")
         status = retrieve_registry("Status")
         if not in_backup and status != "Disabled":
@@ -103,6 +125,7 @@ def failure_detection():
             if last_heartbeat < expiry:
                 authority = request_authority()
                 if authority:
+                    print("Authority granted.. updating data")
                     update_authority()
         db_session.close()
 
