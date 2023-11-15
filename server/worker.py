@@ -77,7 +77,7 @@ def send_heartbeat():
                 except requests.exceptions.RequestException as err:
                     print ("Oops: Something Else",err)
             else:
-                print("No partner found")
+                print("No Heartbeat Sent: No partner found")
 
 def request_authority():
     print("Failure detected! Requesting authority from Orchestrator")
