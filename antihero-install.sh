@@ -36,6 +36,7 @@ sudo rm -rf env/
 python3.10 -m venv env
 source env/bin/activate
 env/bin/pip install -r "$WORKDIR/config/requirements.txt"
+deactivate
 
 if [ $x == 1 ]; then
   cd "$WORKDIR/orchestrator"
