@@ -13,6 +13,8 @@ USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
 old_text="TEXTDIR"
+old_listen_address="#listen_addresses = 'localhost'		# what IP address(es) to listen on;"
+new_listen_address="#listen_addresses = '*'		# what IP address(es) to listen on;"
 sudo apt update
 sudo apt -y install python3.10
 sudo apt -y install postgresql postgresql-contrib
@@ -28,6 +30,7 @@ sudo ufw allow 8000/tcp
 # echo "Work directory:"
 # echo "$WORKDIR"
 # sudo cp -rf "$WORKDIR/config/postgresql.conf" /etc/postgresql/14/main/postgresql.conf
+sudo sed -i "s|$old_listen_address|$new_listen_address|" "/etc/postgresql/14/main/postgresql.conf"
 sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
 
