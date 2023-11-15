@@ -15,9 +15,9 @@ BASE_DESIRABILITY_100 = 7
 # ROWS 1 through 22 for each section
 
 # I, J, K: Section, Row, Seat
-for i in range(101, 146):
-    for j in range(1,22):
-        for k in range(1, 22):
+for i in range(101, 105):
+    for j in range(1,4):
+        for k in range(1, 10):
             # 78 to 86% are premium
             new_inv = Inventory()
             new_inv.location = 0
