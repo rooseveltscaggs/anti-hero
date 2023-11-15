@@ -115,19 +115,23 @@ def failure_detection():
     print("Background failure detection is running...")
     while True:
         time.sleep(HEARTBEAT_TIMEOUT)
-        print("Checking for timeout")
-        in_backup = retrieve_registry("In_Backup")
-        status = retrieve_registry("Status")
-        if not in_backup and status != "Disabled":
-            # Check heartbeat
-            expiry = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT)
-            last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
-            if last_heartbeat < expiry:
-                authority = request_authority()
-                if authority:
-                    print("Authority granted.. updating data")
-                    update_authority()
-        db_session.close()
+        partner_id = retrieve_registry("Partner_ID")
+        if partner_id:
+            print("Checking for timeout")
+            in_backup = retrieve_registry("In_Backup")
+            status = retrieve_registry("Status")
+            if not in_backup and status != "Disabled":
+                # Check heartbeat
+                last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
+                expiry = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT)
+                if last_heartbeat < expiry:
+                    authority = request_authority()
+                    if authority:
+                        print("Authority granted.. updating data")
+                        update_authority()
+            db_session.close()
+        else:
+            print("No Timeout: No partner found...")
 
 
         # Send heartbeat
