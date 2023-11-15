@@ -13,8 +13,8 @@ USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
 old_text="TEXTDIR"
-old_listen_address="#listen_addresses = 'localhost'		# what IP address(es) to listen on;"
-new_listen_address="#listen_addresses = '*'		# what IP address(es) to listen on;"
+old_listen_address="#listen_addresses = 'localhost'"
+new_listen_address="listen_addresses = '*'"
 sudo apt update
 sudo apt -y install python3.10
 sudo apt -y install postgresql postgresql-contrib
