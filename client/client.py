@@ -2,6 +2,7 @@ from multiprocessing import Process
 import datetime
 import requests
 import time
+import csv
 
 ORC_URL = ""
 ORC_IP = ""
@@ -200,62 +201,54 @@ def view_search_inventory():
         if exit == "q":
             break
 
+def send_and_record(filename, url, stop_time, descriptor="None"):
+    with open(filename, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow(['Timestamp', 'Response', 'Descriptor'])
+        while stop_time > datetime.datetime.utcnow():
+            current_datetime = str(datetime.datetime.utcnow())
+            try:
+                response = requests.get(url)
+                if response.ok:
+                    csv_writer.writerow([current_datetime, 'Success', descriptor])
+                else:
+                    csv_writer.writerow([current_datetime, 'Failure', descriptor])
+            except requests.exceptions.RequestException as e:
+                # print(f"Error: {e}")
+                csv_writer.writerow([current_datetime, 'Failure', descriptor])
+    return
+
 def send_requests():
     # Continuous, Timed/Scheduled,
     # Static, Random (Unbounded), Random (Bounded)
     # Inject Failure at time t = ?
-    first_success = False
-    request_count = 0
+    # first_success = False
+    # request_count = 0
 
-    wait_time = int(input("Enter a wait time (seconds) between requests: "))
+    # wait_time = int(input("Enter a wait time (seconds) between requests: ") or 0)
     inv_id = input("Enter an inventory id to select: ")
+    duration = int(input("Enter recording duration in seconds: ") or 60)
 
     inventory = INVENTORY_MAP[int(inv_id)]
-
     primary = SERVER_MAP[inventory["location"]]
     primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
-
-    has_backup = True if (primary["partner_id"] is not None) else False
-    
+    has_backup = True if (primary["partner_id"] is not None) else False    
     # Check if primary has backup
     if has_backup:
         backup = SERVER_MAP[primary["partner_id"]]
         backup_url = f'http://{backup["ip_address"]}:{backup["port"]}/inventory/{inv_id}'
-    while True:
-        request_count += 1
-        try:
-            response = requests.get(primary_url)
-        except requests.exceptions.RequestException as e:
-            print(f"Error: {e}")
-        if response.ok:
-            # If the response status code is 200 (OK), parse the response as JSON
-            json_data = response.json()
-            current_datetime = str(datetime.datetime.utcnow())
-            print(f'{current_datetime} - Req #{request_count}: Received data from primary!')
-            if not first_success:
-                print(json_data)
-                first_success = True
-        else:
-            first_success = False
-            if has_backup:
-                print("Bad response from primary, attempting to contact backup...")
-                for i in range(0, 10):
-                    try:
-                        backup_resp = requests.get(backup_url)
-                    except requests.exceptions.RequestException as e:
-                        print(f"Error: {e}")
-                    if backup_resp.ok:
-                        json_data = backup_resp.json()
-                        print("Received data from backup: ")
-                        print(json_data)
-                        break
-                    else:
-                        print("Bad response from backup... trying again in 2 seconds")
-                        time.sleep(2)
-            else:
-                print("Bad response from primary, no backup listed.. trying again")
-        if wait_time > 0:
-            time.sleep(wait_time)
+    
+    print("Running experiment...")
+    stop_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)
+    p1 = Process(target=send_and_record, args=(f"primary_{stop_time}.csv", primary_url, stop_time, "Primary",))
+    p1.start()
+    if has_backup:
+        p2 = Process(target=send_and_record, args=(f"backup_{stop_time}.csv", backup_url, stop_time, "Backup",))
+        p2.start()
+        p2.join()
+    p1.join()
+    print("Experiment completed!")
+    
     # print(" -- Automated Request Frequency --")
     # print("1) Continuous (until stopped)")
     # print("2) Scheduled")
