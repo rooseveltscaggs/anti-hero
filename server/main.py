@@ -126,11 +126,7 @@ async def update_all_servers(request: Request):
 @app.put("/heartbeat")
 def receive_heartbeat():
     request_time = datetime.utcnow()
-    hb_entry = db_session.query(RegistryEntry).filter(RegistryEntry.registry_name=="Last_Heartbeat").first()
-    if not hb_entry:
-        hb_entry = RegistryEntry(registry_name="Last_Heartbeat")
-    hb_entry.datetime_value = request_time
-    db_session.commit()
+    store_registry("Last_Heartbeat", request_time)
     return {"status": "Success", "received": request_time}
 
 @app.get("/status")

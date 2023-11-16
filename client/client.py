@@ -126,7 +126,7 @@ def transfer_inventory():
     else:
         print("Bad response from Orchestrator")
 
-def sync_inventory():
+def sync_servers():
     print("Sending sync request to Orchestrator...")
     curr_url = f'http://{ORC_IP}:{ORC_PORT}/servers/sync'
     response = requests.request("PUT", curr_url)
@@ -302,7 +302,7 @@ if __name__ == "__main__":
                 transfer_inventory()
 
             case "4":
-                sync_inventory()
+                sync_servers()
 
             case "5":
                 download_inventory_map()
