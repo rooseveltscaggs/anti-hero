@@ -85,7 +85,7 @@ def request_authority():
     partner_id = retrieve_registry("Partner_ID")
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
-    curr_url = f'http://{orc_ip}:{orc_port}/failure?failed_server={partner_id}&backup_server={server_id}'
+    curr_url = f'http://{orc_ip}:{orc_port}/failure?failed_server_id={partner_id}&backup_server_id={server_id}'
     
     try:
         response = requests.request("PUT", curr_url)
