@@ -160,7 +160,7 @@ def pair_servers():
 
 def enable_server():
     print_servers()
-    server_id = input("Choose server to enable: ")
+    server_id = int(input("Choose server to enable: "))
     server = SERVER_MAP[server_id]
     enable_url = f'http://{server["ip_address"]}:{server["port"]}/enable'
     response = requests.request("PUT", enable_url)
@@ -171,7 +171,7 @@ def enable_server():
 
 def disable_server():
     print_servers()
-    server_id = input("Choose server to disable: ")
+    server_id = int(input("Choose server to disable: "))
     server = SERVER_MAP[server_id]
     disable_url = f'http://{server["ip_address"]}:{server["port"]}/disable'
     response = requests.request("PUT", disable_url)
@@ -199,13 +199,20 @@ def view_search_inventory():
             break
 
 def send_requests():
+    first_success = False
+    request_count = 0
+    wait_time = int(input("Enter a wait time (seconds) between requests: "))
     inv_id = input("Enter an inventory id to select: ")
     inventory = INVENTORY_MAP[int(inv_id)]
     primary = SERVER_MAP[inventory["location"]]
-    backup = SERVER_MAP[int(primary["partner_id"])]
-    while True:
-        primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
+    primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
+    has_backup = True if (primary["partner_id"] is not None) else False
+    # Check if primary has backup
+    if has_backup:
+        backup = SERVER_MAP[primary["partner_id"]]
         backup_url = f'http://{backup["ip_address"]}:{backup["port"]}/inventory/{inv_id}'
+    while True:
+        request_count += 1
         try:
             response = requests.get(primary_url)
         except requests.exceptions.RequestException as e:
@@ -213,23 +220,31 @@ def send_requests():
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
             json_data = response.json()
-            print("Received data from primary: ")
-            print(json_data)
+            print(f'Req #{request_count}: Received data from primary!')
+            if not first_success:
+                print(json_data)
+                first_success = True
         else:
-            print("Bad response from primary, attempting to contact backup...")
-            for i in range(0, 10):
-                try:
-                    backup_resp = requests.get(backup_url)
-                except requests.exceptions.RequestException as e:
-                    print(f"Error: {e}")
-                if backup_resp.ok:
-                    json_data = backup_resp.json()
-                    print("Received data from backup: ")
-                    print(json_data)
-                    break
-                else:
-                    print("Bad response from backup... trying again in 2 seconds")
-                    time.sleep(2)
+            first_success = False
+            if has_backup:
+                print("Bad response from primary, attempting to contact backup...")
+                for i in range(0, 10):
+                    try:
+                        backup_resp = requests.get(backup_url)
+                    except requests.exceptions.RequestException as e:
+                        print(f"Error: {e}")
+                    if backup_resp.ok:
+                        json_data = backup_resp.json()
+                        print("Received data from backup: ")
+                        print(json_data)
+                        break
+                    else:
+                        print("Bad response from backup... trying again in 2 seconds")
+                        time.sleep(2)
+            else:
+                print("Bad response from primary, no backup listed.. trying again")
+        if wait_time > 0:
+            time.sleep(wait_time)
     # print(" -- Automated Request Frequency --")
     # print("1) Continuous (until stopped)")
     # print("2) Scheduled")
@@ -306,6 +321,10 @@ if __name__ == "__main__":
             
             case "10":
                 send_requests()
+
+            case "debug":
+                print("--- DEBUG ---")
+                print(INVENTORY_MAP)
             
             case _:
                 print("Error: Selection did not match any options")

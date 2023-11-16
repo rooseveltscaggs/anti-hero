@@ -151,7 +151,7 @@ def pair_servers(partner_id: int):
     update_server_map()
     store_registry("Partner_ID", partner_id)
     partner = db_session.query(Server).filter(Server.id == partner_id).first()
-    return partner
+    return partner.as_dict()
 
 
 @app.put("/orchestrator")
