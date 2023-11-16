@@ -112,6 +112,7 @@ async def update_all_servers(request: Request):
             server = Server()
             db_session.add(server)
         server.id = server_obj["id"]
+        server.ip_address = server_obj["ip_address"]
         server.hostname = server_obj["hostname"]
         server.port = server_obj["port"]
         server.description = server_obj["description"]
