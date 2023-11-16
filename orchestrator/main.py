@@ -116,10 +116,10 @@ def pair_servers(server1_id: int, server2_id: int):
     server1 = db_session.query(Server).filter(Server.id == server1_id).first()
     server2 = db_session.query(Server).filter(Server.id == server2_id).first()
     if server1 and server2:
-        server1_url = f'http://{server1.ip_address}:{server1.port}/partner?server_id={server2_id}'
+        server1_url = f'http://{server1.ip_address}:{server1.port}/partner?partner_id={server2_id}'
         response = requests.request("PUT", server1_url)
         if response.ok:
-            server2_url = f'http://{server2.ip_address}:{server2.port}/partner?server_id={server1_id}'
+            server2_url = f'http://{server2.ip_address}:{server2.port}/partner?partner_id={server1_id}'
             response = requests.request("PUT", server2_url)
             if response.ok:
                 server1.partner_id = server2_id
