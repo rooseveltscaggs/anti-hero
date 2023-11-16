@@ -40,15 +40,14 @@ def store_registry(key, value):
         registry_entry.bool_value = None
         registry_entry.datetime_value = None
     else:
-        if isinstance(value, int):
-            registry_entry.int_value = value
-        if isinstance(value, str):
-            registry_entry.string_value = value
         if isinstance(value, bool):
             registry_entry.bool_value = value
-        if isinstance(value, datetime):
+        elif isinstance(value, (float, int)):
+            registry_entry.int_value = value
+        elif isinstance(value, str):
+            registry_entry.string_value = value
+        elif isinstance(value, datetime):
             registry_entry.datetime_value = value
-    
 
     db_session.commit()
     db_session.close()
@@ -171,6 +170,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
         if not backup_server.in_failure and not failed_server.in_backup:
             failed_server.in_failure = True
             backup_server.in_backup = True
+            db_session.commit()
         else:
             bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
             return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
