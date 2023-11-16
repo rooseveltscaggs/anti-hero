@@ -125,6 +125,9 @@ async def update_all_servers(request: Request):
 @app.put("/heartbeat")
 def receive_heartbeat():
     request_time = datetime.utcnow()
+    status = retrieve_registry("Status")
+    if status == 'Disabled':
+        raise HTTPException(status_code=503, detail="Service unavailable")
     store_registry("Last_Heartbeat", request_time)
     return {"status": "Success", "received": request_time}
 
