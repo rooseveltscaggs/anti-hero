@@ -1,3 +1,5 @@
+from multiprocessing import Process
+import datetime
 import requests
 import time
 
@@ -199,14 +201,22 @@ def view_search_inventory():
             break
 
 def send_requests():
+    # Continuous, Timed/Scheduled,
+    # Static, Random (Unbounded), Random (Bounded)
+    # Inject Failure at time t = ?
     first_success = False
     request_count = 0
+
     wait_time = int(input("Enter a wait time (seconds) between requests: "))
     inv_id = input("Enter an inventory id to select: ")
+
     inventory = INVENTORY_MAP[int(inv_id)]
+
     primary = SERVER_MAP[inventory["location"]]
     primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
+
     has_backup = True if (primary["partner_id"] is not None) else False
+    
     # Check if primary has backup
     if has_backup:
         backup = SERVER_MAP[primary["partner_id"]]
@@ -220,7 +230,8 @@ def send_requests():
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
             json_data = response.json()
-            print(f'Req #{request_count}: Received data from primary!')
+            current_datetime = str(datetime.datetime.utcnow())
+            print(f'{current_datetime} - Req #{request_count}: Received data from primary!')
             if not first_success:
                 print(json_data)
                 first_success = True
