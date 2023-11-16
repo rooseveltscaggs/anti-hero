@@ -182,13 +182,13 @@ def disable_server():
 
 def view_search_inventory():
     download_inventory_map()
-    print(INVENTORY_MAP)
-    # print('\n-- Inventory Preview --')
-    # preview_len = max(0, len(INVENTORY_MAP))
-    # for i in range (0, preview_len):
-    #     seat = INVENTORY_MAP[str(i)]
-    #     inv_summary = f'Section {seat["section"]}) Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
-    #     print(inv_summary)
+    print('\n-- Inventory Preview --')
+    preview_max = max(0, len(INVENTORY_MAP))
+    preview_min = min(preview_max, 5)
+    # Print the first 5 key-value pairs
+    for _, seat in list(INVENTORY_MAP.items())[:preview_min]:
+        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
+        print(inv_summary)
     while True:
         seat_id = input("Enter an inventory id for details: ")
         seat = INVENTORY_MAP[int(seat_id)]
