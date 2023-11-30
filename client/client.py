@@ -1,3 +1,4 @@
+import multiprocessing as mp
 from multiprocessing import Process
 import datetime
 import requests
@@ -238,15 +239,23 @@ def send_requests():
         backup = SERVER_MAP[primary["partner_id"]]
         backup_url = f'http://{backup["ip_address"]}:{backup["port"]}/inventory/{inv_id}'
     
-    print("Running experiment...")
+    print("Starting experiment in 10 seconds...")
+    start_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=10)
     stop_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)
-    p1 = Process(target=send_and_record, args=(f"primary_{stop_time}.csv", primary_url, stop_time, "Primary",))
-    p1.start()
-    if has_backup:
-        p2 = Process(target=send_and_record, args=(f"backup_{stop_time}.csv", backup_url, stop_time, "Backup",))
-        p2.start()
-        p2.join()
-    p1.join()
+    num_workers = mp.cpu_count()  
+
+    for i in range(0, num_workers):
+        process = Process(target=send_and_record, args=(f"primary_{stop_time}_worker_{i}.csv", primary_url, start_time, stop_time, "Primary",))
+        process.start()
+        if i == (num_workers - 1) :
+            print("Running experiment...")
+            process.join()
+    
+    # if has_backup:
+    #     p2 = Process(target=send_and_record, args=(f"backup_{stop_time}.csv", backup_url, stop_time, "Backup",))
+    #     p2.start()
+    #     p2.join()
+    # p1.join()
     print("Experiment completed!")
     
     # print(" -- Automated Request Frequency --")
