@@ -243,7 +243,7 @@ def send_requests():
     
     print("Starting experiment in 10 seconds...")
     start_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=10)
-    stop_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)
+    stop_time = start_time + datetime.timedelta(seconds=duration)
     num_workers = mp.cpu_count()  
 
     for i in range(0, num_workers):
