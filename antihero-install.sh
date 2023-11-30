@@ -49,6 +49,11 @@ if [ $x == 1 ]; then
   sudo systemctl start antihero-orchestrator
   sudo systemctl enable antihero-orchestrator
   sudo systemctl status antihero-orchestrator
+  echo "Rebooting services..."
+  sleep .8
+  sudo systemctl stop antihero-orchestrator
+  sudo systemctl start antihero-orchestrator
+  sudo systemctl status antihero-orchestrator
 elif [ $x == 2 ]; then
   cd "$WORKDIR/server"
   sed "s|$old_text|$WORKDIR|" "$WORKDIR/config/antihero-server.service.template" > "$WORKDIR/config/antihero-server.service"
@@ -62,6 +67,17 @@ elif [ $x == 2 ]; then
   sudo systemctl enable antihero-serverbg
   sudo systemctl status antihero-server
   sudo systemctl status antihero-serverbg
+  echo "Rebooting services..."
+  sleep .8
+  sudo systemctl stop antihero-server
+  sudo systemctl stop antihero-serverbg
+  sudo systemctl start antihero-server
+  sudo systemctl start antihero-serverbg
+  sudo systemctl status antihero-server
+  sudo systemctl status antihero-serverbg
+
+
+
 elif [ $x == 3 ]; then
   cd "$WORKDIR"
   echo "Dependency installs complete!"
