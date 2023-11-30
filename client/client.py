@@ -202,10 +202,12 @@ def view_search_inventory():
         if exit == "q":
             break
 
-def send_and_record(filename, url, stop_time, descriptor="None"):
+def send_and_record(filename, url, start_time, stop_time, descriptor="None"):
     with open(filename, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Timestamp', 'Response', 'Descriptor'])
+        while start_time > datetime.datetime.utcnow():
+            time.sleep(1)
         while stop_time > datetime.datetime.utcnow():
             current_datetime = str(datetime.datetime.utcnow())
             try:
