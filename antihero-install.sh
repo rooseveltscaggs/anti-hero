@@ -10,7 +10,7 @@ echo -n "Enter Server Type to Install: "
 read x
 
 if [ $x == 1 ]; then
-  echo -n "Automatically initialize inventory? (y/n)"
+  echo -n "Automatically initialize inventory? (y/n) "
   read init
 fi
 

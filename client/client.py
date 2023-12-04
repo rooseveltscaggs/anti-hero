@@ -54,6 +54,7 @@ def register_new_server():
     orc_autoreg_slug = f'/orchestrator/register?port={port}'
     autoreg_url = server_url + orc_autoreg_slug
     requests.request("POST", autoreg_url)
+    sync_servers()
     download_server_map()
 
 def main_menu():
@@ -112,7 +113,6 @@ def transfer_inventory():
         else:
             # add single number to ids
             ids.append(int(entry))
-    
     print_servers()
     server_id = input("Choose a server to transfer inventory to: ")
 
@@ -126,11 +126,15 @@ def transfer_inventory():
         # json_data = response.json()
         print("Request sent... waiting for changes to propagate")
         time.sleep(5)
+        sync_servers()
         # update_inventory_map()
     else:
         print("Bad response from Orchestrator")
 
-def sync_servers():
+def sync_servers(wait=True):
+    if wait:
+        print("Waiting for changes to propagate...")
+        time.sleep(5)
     print("Sending sync request to Orchestrator...")
     curr_url = f'http://{ORC_IP}:{ORC_PORT}/servers/sync'
     response = requests.request("PUT", curr_url)
@@ -196,7 +200,7 @@ def view_search_inventory():
     while True:
         seat_id = input("Enter an inventory id for details: ")
         seat = INVENTORY_MAP[int(seat_id)]
-        inv_summary = f'Section {seat["section"]}) Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
+        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
         exit = input("Press ENTER to continue searching or type q to quit: ")
         if exit == "q":
@@ -317,7 +321,7 @@ if __name__ == "__main__":
                 transfer_inventory()
 
             case "4":
-                sync_servers()
+                sync_servers(wait=False)
 
             case "5":
                 download_inventory_map()
