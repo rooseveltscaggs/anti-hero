@@ -15,8 +15,8 @@ def get_orchestrator():
     global ORC_IP
     global ORC_PORT
     global ORC_URL
-    ORC_IP = input("Enter the IP Address of the Orchestrator: ")
-    ORC_PORT = input("Enter the port number of the Orchestrator: ")
+    ORC_IP = input("Enter the IP Address of the Orchestrator (Press ENTER for default): ") or "10.10.1.1"
+    ORC_PORT = input("Enter the port number of the Orchestrator (Press ENTER for default): ") or "8000"
     ORC_URL = f'http://{ORC_IP}:{ORC_PORT}'
     return ORC_URL
 
