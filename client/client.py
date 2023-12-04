@@ -74,6 +74,7 @@ def main_menu():
     print("8) Disable Server")
     print("9) View/Search Inventory")
     print("10) Send Automated Requests")
+    print("11) Reset All Servers")
     print("\n")
     return input("Enter the number of an option above: ")
 
@@ -303,6 +304,19 @@ def send_requests():
     #         case _:
     #             print("Error: Selection did not match any options")
 
+
+def reset_all_servers():
+    global SERVER_MAP
+    download_server_map()
+    print("Sending inventory reset command to all servers...")
+    for server in SERVER_MAP.values():
+        server_url = f'http://{server["hostname"]}:{server["port"]}/reset'
+        requests.request("PUT", server_url)
+    
+    orc_reset_url = f'http://{server["hostname"]}:{server["port"]}/reset'
+    requests.request("PUT", orc_reset_url)
+    print("Request(s) sent!")
+
 if __name__ == "__main__":
     while True:
         # Ask for Orchestrator IP and Port
@@ -355,6 +369,9 @@ if __name__ == "__main__":
             
             case "10":
                 send_requests()
+            
+            case "11":
+                reset_all_servers()
 
             case "debug":
                 print("--- DEBUG ---")

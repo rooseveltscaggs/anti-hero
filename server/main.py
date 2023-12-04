@@ -419,3 +419,16 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             json_data = response.json()
     db_session.close()
     return response
+
+@app.put("/reset")
+def reset():
+    default_dict = {
+        Inventory.availability: "Available",
+        Inventory.is_dirty: False,
+        Inventory.location: 0,
+        Inventory.on_backup: False,
+        Inventory.transaction_id: None
+    }
+
+    db_session.query(Inventory).update(default_dict, synchronize_session = False)
+    db_session.commit()
