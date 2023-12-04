@@ -149,6 +149,7 @@ def get_inventory_map():
 
 @app.get("/inventory/{item_id}")
 def get_item_status(item_id: int):
+    db_session.refresh()
     inventory = db_session.query(Inventory).filter(Inventory.id == item_id).first()
     return inventory
 

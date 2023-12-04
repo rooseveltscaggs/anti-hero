@@ -347,6 +347,7 @@ def get_inventory_map():
 
 @app.get("/inventory/{item_id}")
 def get_item_status(item_id: int):
+    db_session.refresh()
     # Check if server is disabled
     server_id = retrieve_registry("Server_ID")
     status = retrieve_registry("Status")
