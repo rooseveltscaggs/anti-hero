@@ -77,6 +77,7 @@ def send_heartbeat():
                     print ("Oops: Something Else",err)
             else:
                 print("No Heartbeat Sent: No partner found")
+        db_session.close()
 
 def request_authority():
     print("Failure detected! Requesting authority from Orchestrator")
@@ -108,6 +109,7 @@ def update_authority():
     server_id = retrieve_registry("Server_ID")
     db_session.query(Inventory).filter(Inventory.location == partner_id).update({Inventory.location: server_id, Inventory.on_backup: True}, synchronize_session = False)
     db_session.commit()
+    db_session.close()
     return True
 
 def failure_detection():

@@ -338,6 +338,7 @@ def get_server_status(server_id: int):
 
 @app.get("/inventory")
 def get_inventory_map():
+    db_session.refresh()
     server_id = retrieve_registry("Server_ID")
     status = retrieve_registry("Status")
     if status == 'Disabled':

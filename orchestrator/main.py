@@ -144,6 +144,7 @@ def get_server_status(server_id: int):
 
 @app.get("/inventory")
 def get_inventory_map():
+    db_session.refresh()
     inventory = db_session.query(Inventory).all()
     return inventory
 
