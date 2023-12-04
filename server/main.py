@@ -346,6 +346,10 @@ def get_inventory_map():
     inventory = db_session.query(Inventory).all()
     return inventory
 
+@app.get("/latency")
+def latency_test():
+    return {"row":"1","section":"101","seat":"1","location":1,"availability":"Available","transaction_id":None,"is_dirty":False,"desirability":8,"id":1,"price":457,"description":None,"on_backup":False}
+
 @app.get("/inventory/{item_id}")
 def get_item_status(item_id: int):
     db_session.commit()
