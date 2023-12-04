@@ -144,13 +144,13 @@ def get_server_status(server_id: int):
 
 @app.get("/inventory")
 def get_inventory_map():
-    db_session.refresh()
     inventory = db_session.query(Inventory).all()
+    db_session.refresh(inventory)
     return inventory
 
 @app.get("/inventory/{item_id}")
 def get_item_status(item_id: int):
-    db_session.refresh()
+    db_session.commit()
     inventory = db_session.query(Inventory).filter(Inventory.id == item_id).first()
     return inventory
 

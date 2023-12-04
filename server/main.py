@@ -338,7 +338,7 @@ def get_server_status(server_id: int):
 
 @app.get("/inventory")
 def get_inventory_map():
-    db_session.refresh()
+    db_session.commit()
     server_id = retrieve_registry("Server_ID")
     status = retrieve_registry("Status")
     if status == 'Disabled':
@@ -348,7 +348,7 @@ def get_inventory_map():
 
 @app.get("/inventory/{item_id}")
 def get_item_status(item_id: int):
-    db_session.refresh()
+    db_session.commit()
     # Check if server is disabled
     server_id = retrieve_registry("Server_ID")
     status = retrieve_registry("Status")
@@ -366,6 +366,7 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
     # Event.resource_id == row.id) & (Event.weekday.contains(weekdayAbbrev[i])) & (Event.recurrence_type.in_(['Weekly', 'Monthly'])
     # session.query(Table.column, 
 #    func.count(Table.column)).group_by(Table.column).all()
+    db_session.commit()
     locations = db_session.query(Inventory.location).filter(Inventory.id.in_(ids)).group_by(Inventory.location).all()
     for location in locations:
         inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location).all()
