@@ -143,8 +143,18 @@ def sync_servers(wait=True):
     response = requests.request("PUT", curr_url)
     print("Request sent!")
 
-def download_inventory_map():
+def download_inventory_map(inv_id=None):
     # Download servers from orchestrator (Success!)
+    if inv_id:
+        # Silently update 
+        servers_url = f'{ORC_URL}/inventory/{inv_id}'
+        if servers_resp.ok:
+            # If the response status code is 200 (OK), parse the response as JSON
+            global INVENTORY_MAP
+            json_obj = servers_resp.json()
+            INVENTORY_MAP[inv_id] = json_obj
+        return
+                
     print("Downloading inventory map from Orchestrator...")
     servers_url = f'{ORC_URL}/inventory'
     servers_resp = requests.get(servers_url)
@@ -204,6 +214,7 @@ def view_search_inventory():
         seat_id = input("Enter an inventory id for details or type q to quit: ")
         if seat_id == "q":
             break
+        download_inventory_map(seat_id)
         seat = INVENTORY_MAP[int(seat_id)]
         inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
