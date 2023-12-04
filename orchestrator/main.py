@@ -254,6 +254,8 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
-            json_data = response.json()
+            # json_data = response.json()
+            db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: dest_serv.id}, synchronize_session = False)
+            db_session.commit()
     db_session.close()
     return response
