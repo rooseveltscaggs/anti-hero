@@ -23,6 +23,7 @@ def update_server_status(server_id):
             json_data = response.json()
             server.status = json_data['status']
             server.last_updated = datetime.utcnow()
+    db_session.close()
 
 @app.get("/status")
 def server_status():
@@ -79,6 +80,7 @@ def auto_register(request: Request, background_tasks: BackgroundTasks, hostname:
         server = Server(hostname=hostname, ip_address=host_ip, port=port)
         db_session.add(server)
         db_session.commit()
+        db_session.close()
         # return {"host_ip": host_ip, "hostname": hostname, "server_id": server.id}
     servers = db_session.query(Server).all()
     for server_obj in servers:
@@ -92,6 +94,7 @@ def sync_all_servers(background_tasks: BackgroundTasks):
     for server_obj in servers:
         background_tasks.add_task(send_server_map, server_obj.id)
         background_tasks.add_task(send_inventory, server_obj.id)
+    db_session.close()
     return {"Status": "Queued"}
 
 @app.get("/servers")
@@ -104,6 +107,7 @@ def create_server(host_ip: str, request: Request, background_tasks: BackgroundTa
     server = Server(hostname=hostname, host_ip=host_ip, port=port)
     db_session.add(server)
     db_session.commit()
+    db_session.close()
     servers = db_session.query(Server).all()
     for server_obj in servers:
         background_tasks.add_task(send_server_map, server_obj.id)
@@ -174,6 +178,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
         else:
             bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
             return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
+    db_session.close()
     return {"Status": "Granted"}
 
 def send_server_map(server_id):
@@ -188,6 +193,7 @@ def send_server_map(server_id):
         if response.ok:
             server.last_updated = datetime.utcnow()
     db_session.commit()
+    db_session.close()
 
 def send_inventory(server_id):
     inventory = db_session.query(Inventory).all()
@@ -201,6 +207,7 @@ def send_inventory(server_id):
         if response.ok:
             server.last_updated = datetime.utcnow()
     db_session.commit()
+    db_session.close()
 
 def transfer_inventory(inventory_ids, current_location, new_location):
     request_time = datetime.utcnow()
@@ -272,3 +279,4 @@ def reset():
 
     db_session.query(Inventory).update(default_dict, synchronize_session = False)
     db_session.commit()
+    db_session.close()

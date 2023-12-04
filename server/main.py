@@ -98,6 +98,7 @@ def update_server_map():
             server.last_updated = server_obj["last_updated"]
             server.status = server_obj["status"]
             db_session.commit()
+            db_session.close()
         return json_data
     else:
         return {}
@@ -120,6 +121,7 @@ async def update_all_servers(request: Request):
             server.last_updated = datetime.fromisoformat(server_obj["last_updated"])
         server.status = server_obj["status"]
         db_session.commit()
+    db_session.close()
     return {"status": "Success"}
 
 @app.put("/heartbeat")
@@ -186,6 +188,7 @@ def forwarded_request(ids: List[int]):
     if not in_backup:
         db_session.query(Inventory).filter(Inventory.id.in_(ids)).update({Inventory.is_dirty: True}, synchronize_session = False)
         db_session.commit()
+        db_session.close()
         return {"Status": "Success", "Action": "Marked Dirty", "inventory_ids": ids}
     # Otherwise, don't make any changes and respond with error
     else:
@@ -204,6 +207,7 @@ async def update_all_inventory(request: Request):
         for key in item.keys():
             setattr(inv_obj, key, item[key])
     db_session.commit() 
+    db_session.close()
     return {}
 
 @app.get("/orchestrator/inventory")
@@ -220,7 +224,9 @@ def retrieve_orchestrator_inventory():
             inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
             if not inv_obj:
                 inv_obj = Inventory(**item)
-                inv_obj.add()
+                db_session.add(inv_obj)
+                db_session.commit()
+                db_session.close()
             
         return json_data
     else:
@@ -263,6 +269,7 @@ def activate_inventory(ids: List[int]):
     server_id = retrieve_registry("Server_ID", 0)
     db_session.query(Inventory).filter(Inventory.id.in_(ids)).update({Inventory.location: server_id}, synchronize_session = False)
     db_session.commit()
+    db_session.close()
     return {"Status": "Activated", "reserved_ids": ids} 
 
 @app.post("/inventory/buy")
@@ -305,6 +312,7 @@ def buy_inventory(ids: List[int]):
             bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to reach sync with partner"}
             return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=bad_resp)
     db_session.commit()
+    db_session.close()
     return {"Status": "Success", "Transaction_ID": transaction_id, "Inventory": reserved_ids}
 
 @app.get("/servers")
@@ -388,6 +396,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             else:
                 res.status = "Cancelled"
         db_session.commit()
+        
             
     else:
         curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
@@ -432,3 +441,4 @@ def reset():
 
     db_session.query(Inventory).update(default_dict, synchronize_session = False)
     db_session.commit()
+    db_session.close()
