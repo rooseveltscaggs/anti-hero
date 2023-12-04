@@ -136,8 +136,8 @@ def transfer_inventory():
 
 def sync_servers(wait=True):
     if wait:
-        print("Waiting for changes to propagate...")
-        time.sleep(5)
+        print("Auto-Sync: Waiting for previous changes to propagate...")
+        time.sleep(3)
     print("Sending sync request to Orchestrator...")
     curr_url = f'http://{ORC_IP}:{ORC_PORT}/servers/sync'
     response = requests.request("PUT", curr_url)
