@@ -149,6 +149,7 @@ def download_inventory_map(inv_id=None):
     if inv_id:
         # Silently update 
         servers_url = f'{ORC_URL}/inventory/{inv_id}'
+        servers_resp = requests.get(servers_url)
         if servers_resp.ok:
             # If the response status code is 200 (OK), parse the response as JSON
             json_obj = servers_resp.json()
