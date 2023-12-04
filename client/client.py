@@ -15,6 +15,7 @@ def get_orchestrator():
     global ORC_IP
     global ORC_PORT
     global ORC_URL
+    print("Default Orchestrator URL: 10.10.1.1:8000")
     ORC_IP = input("Enter the IP Address of the Orchestrator (Press ENTER for default): ") or "10.10.1.1"
     ORC_PORT = input("Enter the port number of the Orchestrator (Press ENTER for default): ") or "8000"
     ORC_URL = f'http://{ORC_IP}:{ORC_PORT}'
@@ -198,13 +199,13 @@ def view_search_inventory():
         inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
     while True:
-        seat_id = input("Enter an inventory id for details: ")
+        seat_id = input("Enter an inventory id for details or type q to quit: ")
+        if seat_id == "q":
+            break
         seat = INVENTORY_MAP[int(seat_id)]
         inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
-        exit = input("Press ENTER to continue searching or type q to quit: ")
-        if exit == "q":
-            break
+        
 
 def send_and_record(filename, url, start_time, stop_time, descriptor="None"):
     with open(filename, 'w', newline='') as csvfile:
