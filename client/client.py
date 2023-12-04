@@ -144,13 +144,13 @@ def sync_servers(wait=True):
     print("Request sent!")
 
 def download_inventory_map(inv_id=None):
+    global INVENTORY_MAP
     # Download servers from orchestrator (Success!)
     if inv_id:
         # Silently update 
         servers_url = f'{ORC_URL}/inventory/{inv_id}'
         if servers_resp.ok:
             # If the response status code is 200 (OK), parse the response as JSON
-            global INVENTORY_MAP
             json_obj = servers_resp.json()
             INVENTORY_MAP[inv_id] = json_obj
         return
@@ -160,7 +160,7 @@ def download_inventory_map(inv_id=None):
     servers_resp = requests.get(servers_url)
     if servers_resp.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        global INVENTORY_MAP
+        # global INVENTORY_MAP
         json_obj = servers_resp.json()
         for item in json_obj:
             INVENTORY_MAP[item['id']] = item
