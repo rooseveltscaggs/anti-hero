@@ -50,10 +50,12 @@ def register_new_server():
     # Send Orchestrator details to server
     orc_update_slug = f'/orchestrator?ip_address={ORC_IP}&port={ORC_PORT}'
     update_url = server_url + orc_update_slug
+    print("Sending Orchestrator's location to server")
     requests.request("PUT", update_url)
     # Send autoregister request to server
     orc_autoreg_slug = f'/orchestrator/register?port={port}'
     autoreg_url = server_url + orc_autoreg_slug
+    print("Instructing server to automatically register with Orchestrator...")
     requests.request("POST", autoreg_url)
     sync_servers()
     download_server_map()

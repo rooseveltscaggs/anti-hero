@@ -54,7 +54,7 @@ if [ $x == 1 ]; then
   sudo systemctl start antihero-orchestrator
   sudo systemctl enable antihero-orchestrator
   echo "Rebooting services..."
-  sleep .8
+  sleep 8
   sudo systemctl stop antihero-orchestrator
   sudo systemctl start antihero-orchestrator
   # Running inventory initializer...
@@ -77,7 +77,7 @@ elif [ $x == 2 ]; then
   sudo systemctl start antihero-serverbg
   sudo systemctl enable antihero-serverbg
   echo "Rebooting services..."
-  sleep .8
+  sleep 8
   sudo systemctl stop antihero-server
   sudo systemctl stop antihero-serverbg
   sudo systemctl start antihero-server
