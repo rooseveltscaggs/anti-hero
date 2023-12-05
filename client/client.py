@@ -288,7 +288,7 @@ def simple_experiment_configurator():
             case _:
                 start_time_value = datetime.datetime.fromisoformat(start_time_string)
     
-    config_string += ("|" + start_time_value.isoformat())
+    config_string += ("|" + start_time_value.isoformat()[:19])
 
     print("\n---- End Time Options ----")
     print("Text entered can be relative to start time (h, m, s) or absolute (UTC)")
@@ -310,7 +310,7 @@ def simple_experiment_configurator():
             case _:
                 end_time_value = datetime.datetime.fromisoformat(start_time_string)
     
-    config_string += ("|" + end_time_value.isoformat())
+    config_string += ("|" + end_time_value.isoformat()[:19])
 
     print("\n Generated config string: ")
     print(str("\n" + config_string))
