@@ -318,75 +318,75 @@ def simple_experiment_configurator():
 
 # retry_count = -1, 0, 1+
 # If count == 0, continue to next request
-def send_and_record(filepath, start_time, stop_time, url1, url2, 
-                    initial_delay, inv_array, initial_try_count,  
-                    descriptor="None"):
-    with open(filepath, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Descriptor'])
+# def send_and_record(filepath, start_time, stop_time, url1, url2, 
+#                     initial_delay, inv_array, initial_try_count,  
+#                     descriptor="None"):
+#     with open(filepath, 'w', newline='') as csvfile:
+#         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+#         csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Descriptor'])
 
-        print("Waiting for experiment start time...")
-        while start_time > datetime.datetime.utcnow():
-            time.sleep(1)
+#         print("Waiting for experiment start time...")
+#         while start_time > datetime.datetime.utcnow():
+#             time.sleep(1)
 
-        urls = [url1, url2]
-        url_index = 0
-        # Set initial delay
-        curr_delay = 25
-        i = 0
+#         urls = [url1, url2]
+#         url_index = 0
+#         # Set initial delay
+#         curr_delay = 25
+#         i = 0
 
         
 
-        # WHILE
-        # If request_delay_option is 1 and i >= 100: decrease curr_delay by 5 seconds (until 0)
-        # 
+#         # WHILE
+#         # If request_delay_option is 1 and i >= 100: decrease curr_delay by 5 seconds (until 0)
+#         # 
 
-        # Choose inventory ID from range array (random or linear)
-        inv_id = random.choice(inv_array)
-        # Build URL (based on endpoint + inventory ID)
-        curr_url = urls[url_index] + "/" + str(inv_id)
+#         # Choose inventory ID from range array (random or linear)
+#         inv_id = random.choice(inv_array)
+#         # Build URL (based on endpoint + inventory ID)
+#         curr_url = urls[url_index] + "/" + str(inv_id)
 
-        # Send request
-        try_count = initial_try_count 
-        while try_count != 0 and :
-            try:
-                request_datetime = str(datetime.datetime.utcnow())
-                response = requests.get(curr_url)
-                response_datetime = str(datetime.datetime.utcnow())
-                if response.ok:
-                    csv_writer.writerow([request_datetime, response_datetime, 'Success', descriptor])
-                else:
-                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', descriptor])
-            except requests.exceptions.RequestException as e:
-                # print(f"Error: {e}")
-                csv_writer.writerow([request_datetime, "N/A", 'Failure', descriptor])
-            try_count -= 1
+#         # Send request
+#         try_count = initial_try_count 
+#         while try_count != 0 and :
+#             try:
+#                 request_datetime = str(datetime.datetime.utcnow())
+#                 response = requests.get(curr_url)
+#                 response_datetime = str(datetime.datetime.utcnow())
+#                 if response.ok:
+#                     csv_writer.writerow([request_datetime, response_datetime, 'Success', descriptor])
+#                 else:
+#                     csv_writer.writerow([request_datetime, response_datetime, 'Failure', descriptor])
+#             except requests.exceptions.RequestException as e:
+#                 # print(f"Error: {e}")
+#                 csv_writer.writerow([request_datetime, "N/A", 'Failure', descriptor])
+#             try_count -= 1
 
-        # Log result
-        # If failed, follow procedure (ignore and continue, try again indefinitely, try again X number of time)
-            # Still failing? Switch to Backup
-        # If successful, start loop over with primary
-
-
+#         # Log result
+#         # If failed, follow procedure (ignore and continue, try again indefinitely, try again X number of time)
+#             # Still failing? Switch to Backup
+#         # If successful, start loop over with primary
 
 
-        while stop_time > datetime.datetime.utcnow():
-            current_datetime = str(datetime.datetime.utcnow())
 
 
-            try:
-                response = requests.get(url)
-                response_datetime = str(datetime.datetime.utcnow())
-                if response.ok:
-                    csv_writer.writerow([current_datetime, 'Success', descriptor])
-                else:
-                    csv_writer.writerow([current_datetime, 'Failure', descriptor])
-            except requests.exceptions.RequestException as e:
-                # print(f"Error: {e}")
-                csv_writer.writerow([current_datetime, 'Failure', descriptor])
+#         while stop_time > datetime.datetime.utcnow():
+#             current_datetime = str(datetime.datetime.utcnow())
+
+
+#             try:
+#                 response = requests.get(url)
+#                 response_datetime = str(datetime.datetime.utcnow())
+#                 if response.ok:
+#                     csv_writer.writerow([current_datetime, 'Success', descriptor])
+#                 else:
+#                     csv_writer.writerow([current_datetime, 'Failure', descriptor])
+#             except requests.exceptions.RequestException as e:
+#                 # print(f"Error: {e}")
+#                 csv_writer.writerow([current_datetime, 'Failure', descriptor])
 
             
-    return
+#     return
 
 # retry_count = -1, 0, 1+
 # If count == 0, continue to next request
@@ -519,7 +519,7 @@ if __name__ == "__main__":
     while True:
         # Ask for Orchestrator IP and Port
         ORC_URL = get_orchestrator()
-        
+
         # Attempt to connect to Orchestrator
         status_url = f'{ORC_URL}/status'
         status_resp = requests.get(status_url)
