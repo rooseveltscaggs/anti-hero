@@ -312,7 +312,7 @@ def simple_experiment_configurator():
     
     config_string += ("|" + end_time_value.isoformat()[:19])
 
-    print("\n Generated config string: ")
+    print("\nGenerated config string: ")
     print(str("\n" + config_string))
 
 

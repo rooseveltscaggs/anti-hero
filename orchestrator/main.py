@@ -144,8 +144,8 @@ def get_server_status(server_id: int):
 
 @app.get("/inventory")
 def get_inventory_map():
+    db_session.commit()
     inventory = db_session.query(Inventory).all()
-    db_session.refresh(inventory)
     return inventory
 
 @app.get("/latency/{nil}")
