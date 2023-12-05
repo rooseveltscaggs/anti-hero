@@ -4,12 +4,30 @@ import datetime
 import requests
 import time
 import csv
+import random
+import re
 
 ORC_URL = ""
 ORC_IP = ""
 ORC_PORT = ""
 SERVER_MAP = {}
 INVENTORY_MAP = {}
+EXPERIMENT_ARGS_LEN = 13
+
+def range_to_list(range_string):
+    items = []
+    range_list = range_string.split(",")
+    for entry in range_list:
+        # create a list that is range and add to items array
+        if "-" in entry:
+            range_arr = entry.split("-")
+            begin = int(range_arr[0])
+            end = int(range_arr[1])
+            for i in range(begin, end+1):
+                items.append(i)
+        else:
+            # add single number to items
+            items.append(int(entry))
 
 def get_orchestrator():
     global ORC_IP
@@ -73,8 +91,9 @@ def main_menu():
     print("7) Enable Server")
     print("8) Disable Server")
     print("9) View/Search Inventory")
-    print("10) Send Automated Requests")
-    print("11) Reset All Servers")
+    print("10) Send Automated Requests (Simple)")
+    print("11) Simple Experiment Configurator")
+    print("12) Reset All Servers")
     print("\n")
     return input("Enter the number of an option above: ")
 
@@ -220,18 +239,144 @@ def view_search_inventory():
         seat = INVENTORY_MAP[int(seat_id)]
         inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
         print(inv_summary)
-        
 
-def send_and_record(filename, url, start_time, stop_time, descriptor="None"):
-    with open(filename, 'w', newline='') as csvfile:
+def simple_experiment_configurator():
+    config_string = ""
+    # Experiment Name
+    experiment_name = input("Enter a name for this experiment: ")
+    exp_name_clean = experiment_name.replace(" ", "_")
+    config_string += exp_name_clean
+
+    # Request Delay
+    delay = input("\nEnter a delay time between requests (in seconds): ")
+    config_string += ("|" + delay)
+
+    # Server ID
+    print_servers()
+    server_id = input("\nEnter a server ID for requests to be sent to: ")
+    config_string += ("|" + server_id)
+
+    # Endpoint Options
+    print("\n---- Endpoint Options ----")
+    print("1) Latency Test")
+    print("2) Inventory View (Read Only)")
+    print("3) Inventory Buy (Attempt to Reserve)")
+    endpoint = input("\nEnter an option above: ")
+    config_string += ("|" + endpoint)
+   
+    # Inventory Range to Request
+    range_string = input("Enter an inclusive range of inventory ids (e.g.: \"1-8, 11, 17\"): ")
+    config_string += ("|" + range_string)
+
+    print("\n---- Start Time Options ----")
+    print("Text entered can be relative (h, m, s) or absolute (UTC)")
+    print("Examples: 10m, 10s, 2023-12-05T01:45:00")
+    start_time_string = input("Enter a start time for the experiment: ") or "1m"
+    last_char = (start_time_string[len(start_time_string)-1:len(start_time_string)]).lower()
+    start_time_interval = start_time_string[:len(start_time_string)-1]
+
+    match last_char:
+            case "s":
+                start_time_value = datetime.datetime.utcnow() + datetime.timedelta(seconds=int(start_time_interval))
+
+            case "m":
+                start_time_value = datetime.datetime.utcnow() + datetime.timedelta(minutes=int(start_time_interval))
+
+            case "h":
+                start_time_value = datetime.datetime.utcnow() + datetime.timedelta(hours=int(start_time_interval))
+
+            case _:
+                start_time_value = datetime.datetime.fromisoformat(start_time_string)
+    
+    config_string += ("|" + start_time_value.isoformat())
+
+    print("\n---- End Time Options ----")
+    print("Text entered can be relative to start time (h, m, s) or absolute (UTC)")
+    print("Examples: 10m, 10s, 2023-12-05T01:45:00")
+    end_time_string = input("Enter an end time for the experiment: ") or "1m"
+    last_char = (end_time_string[len(end_time_string)-1:len(end_time_string)]).lower()
+    end_time_interval = end_time_string[:len(end_time_string)-1]
+
+    match last_char:
+            case "s":
+                end_time_value = start_time_value + datetime.timedelta(seconds=int(end_time_interval))
+
+            case "m":
+                end_time_value = start_time_value + datetime.timedelta(minutes=int(end_time_interval))
+
+            case "h":
+                end_time_value = start_time_value + datetime.timedelta(hours=int(end_time_interval))
+
+            case _:
+                end_time_value = datetime.datetime.fromisoformat(start_time_string)
+    
+    config_string += ("|" + end_time_value.isoformat())
+
+    print("\n Generated config string: ")
+    print(str("\n" + config_string))
+
+
+# retry_count = -1, 0, 1+
+# If count == 0, continue to next request
+def send_and_record(filepath, start_time, stop_time, url1, url2, 
+                    initial_delay, inv_array, initial_try_count,  
+                    descriptor="None"):
+    with open(filepath, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow(['Timestamp', 'Response', 'Descriptor'])
+        csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Descriptor'])
+
+        print("Waiting for experiment start time...")
         while start_time > datetime.datetime.utcnow():
             time.sleep(1)
+
+        urls = [url1, url2]
+        url_index = 0
+        # Set initial delay
+        curr_delay = 25
+        i = 0
+
+        
+
+        # WHILE
+        # If request_delay_option is 1 and i >= 100: decrease curr_delay by 5 seconds (until 0)
+        # 
+
+        # Choose inventory ID from range array (random or linear)
+        inv_id = random.choice(inv_array)
+        # Build URL (based on endpoint + inventory ID)
+        curr_url = urls[url_index] + "/" + str(inv_id)
+
+        # Send request
+        try_count = initial_try_count 
+        while try_count != 0 and :
+            try:
+                request_datetime = str(datetime.datetime.utcnow())
+                response = requests.get(curr_url)
+                response_datetime = str(datetime.datetime.utcnow())
+                if response.ok:
+                    csv_writer.writerow([request_datetime, response_datetime, 'Success', descriptor])
+                else:
+                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', descriptor])
+            except requests.exceptions.RequestException as e:
+                # print(f"Error: {e}")
+                csv_writer.writerow([request_datetime, "N/A", 'Failure', descriptor])
+            try_count -= 1
+
+        # Log result
+        # If failed, follow procedure (ignore and continue, try again indefinitely, try again X number of time)
+            # Still failing? Switch to Backup
+        # If successful, start loop over with primary
+
+
+
+
         while stop_time > datetime.datetime.utcnow():
             current_datetime = str(datetime.datetime.utcnow())
+
+
             try:
                 response = requests.get(url)
+                response_datetime = str(datetime.datetime.utcnow())
                 if response.ok:
                     csv_writer.writerow([current_datetime, 'Success', descriptor])
                 else:
@@ -239,70 +384,123 @@ def send_and_record(filename, url, start_time, stop_time, descriptor="None"):
             except requests.exceptions.RequestException as e:
                 # print(f"Error: {e}")
                 csv_writer.writerow([current_datetime, 'Failure', descriptor])
+
+            
     return
 
-def send_requests():
-    # Continuous, Timed/Scheduled,
-    # Static, Random (Unbounded), Random (Bounded)
-    # Inject Failure at time t = ?
-    # first_success = False
-    # request_count = 0
+# retry_count = -1, 0, 1+
+# If count == 0, continue to next request
+def simple_requests(filepath, start_time, stop_time, url, 
+                    delay, inv_array, descriptor="None"):
+    with open(filepath, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Endpoint', 'InventoryID', 'Descriptor'])
 
-    # wait_time = int(input("Enter a wait time (seconds) between requests: ") or 0)
-    inv_id = input("Enter an inventory id to select: ")
-    duration = int(input("Enter recording duration in seconds: ") or 60)
+        print("Waiting for experiment start time...")
+        while start_time > datetime.datetime.utcnow():
+            time.sleep(1)
 
-    inventory = INVENTORY_MAP[int(inv_id)]
-    primary = SERVER_MAP[inventory["location"]]
-    primary_url = f'http://{primary["ip_address"]}:{primary["port"]}/inventory/{inv_id}'
-    has_backup = True if (primary["partner_id"] is not None) else False    
-    # Check if primary has backup
-    if has_backup:
-        backup = SERVER_MAP[primary["partner_id"]]
-        backup_url = f'http://{backup["ip_address"]}:{backup["port"]}/inventory/{inv_id}'
+        print("Beginning experiment...")
+        while stop_time > datetime.datetime.utcnow():
+            # Choose inventory ID from range array (random or linear)
+            inv_id = random.choice(inv_array)
+            # Build URL (based on endpoint + inventory ID)
+            curr_url = url + "/" + str(inv_id)
+            # Send request
+            try:
+                request_datetime = str(datetime.datetime.utcnow())
+                response = requests.get(curr_url)
+                response_datetime = str(datetime.datetime.utcnow())
+                if response.ok:
+                    csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
+                else:
+                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, descriptor])
+            except requests.exceptions.RequestException as e:
+                # print(f"Error: {e}")
+                csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, descriptor])
+            time.sleep(delay)
+
+
+
+def simple_experiment():
+    while True:
+        config_string = input("Enter the configuration string for this experiment: ")
+        config_arr = config_string.split("|")
+        if len(config_arr) == 7:
+            break
+        else:
+            print("Invalid configuration string: wrong number of args")
     
-    print("Starting experiment in 10 seconds...")
-    start_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=10)
-    stop_time = start_time + datetime.timedelta(seconds=duration)
-    num_workers = mp.cpu_count()  
+    SLUGS_ARR = ['/latency', '/inventory', '/inventory/buy']
 
-    for i in range(0, num_workers):
+    experiment_name = config_arr[0]
+    filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:7]}_worker_{i}.csv'
+
+    delay = int(config_arr[1])
+
+    server = SERVER_MAP[config_arr[2]]
+    endpoint_slug = SLUGS_ARR[int(config_arr[3])]
+    server_url = f'http://{server["ip_address"]}:{server["port"]}{endpoint_slug}'
+
+    inv_range_string  = config_arr[4]
+    inv_arr = range_to_list(inv_range_string)
+
+    start_time = datetime.datetime.fromisoformat(config_arr[5])
+    stop_time = datetime.datetime.fromisoformat(config_arr[6])
+    
+
+    
+    num_workers = int(mp.cpu_count() / 2)
+    for i in range(1, num_workers+1):
+        process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, delay, inv_arr, "None",))
+        process.start()
+        if i == num_workers:
+            print("Workers started, running experiment...")
+            process.join()
+
+
+def send_requests():
+    while True:
+        config_string = input("Enter the configuration string for this experiment: ")
+        config_arr = config_string.split("|")
+        if len(config_arr) == EXPERIMENT_ARGS_LEN:
+            break
+        else:
+            print("Invalid configuration string: wrong number of args")
+    
+    SLUGS_ARR = ['/latency', '/inventory', '/inventory/buy']
+
+    experiment_name = config_arr[0]
+    endpoint_index = int(config_arr[1]) - 1
+    request_delay_option = int(config_arr[2])
+    delay_spec = int(config_arr[3])
+    inventory_range_option = int(config_arr[4])
+
+    # Needs to be altered
+    range_spec_string = config_arr[5]
+    range_arr = range_to_list(range_spec_string)
+
+    server_contact_option = int(config_arr[6])
+    loop_count = int(config_arr[7])
+    request_failure_procedure = int(config_arr[8])
+    retry_spec = int(config_arr[9])
+    start_time = datetime.datetime.fromisoformat(config_arr[10])
+    stop_time = datetime.datetime.fromisoformat(config_arr[11])
+    num_workers = int(config_arr[12])
+    
+
+    endpoint_slug = SLUGS_ARR[endpoint_index]
+
+    for i in range(1, num_workers+1):
         process = Process(target=send_and_record, args=(f"primary_{stop_time}_worker_{i}.csv", primary_url, start_time, stop_time, "Primary",))
         process.start()
         if i == (num_workers - 1) :
             print("Running experiment...")
             process.join()
+
+
+
     
-    # if has_backup:
-    #     p2 = Process(target=send_and_record, args=(f"backup_{stop_time}.csv", backup_url, stop_time, "Backup",))
-    #     p2.start()
-    #     p2.join()
-    # p1.join()
-    print("Experiment completed!")
-    
-    # print(" -- Automated Request Frequency --")
-    # print("1) Continuous (until stopped)")
-    # print("2) Scheduled")
-    # print("3) Fixed Number of Requests")
-    # frequency = input("\nChoose a request frequency above: ")
-
-    # print(" -- Inventory ID Scope --")
-    # print("1) Single Inventory ID")
-    # print("2) Random ID from Range")
-    # scope = input("\nChoose a scope above: ")
-
-    # match frequency:
-    #         case "1":
-    #             download_server_map()
-
-    #         case "2":
-    #             register_new_server()
-
-    #         case "3":
-    #             transfer_inventory()
-            
-    #         case _:
-    #             print("Error: Selection did not match any options")
 
 
 def reset_all_servers():
@@ -321,7 +519,7 @@ if __name__ == "__main__":
     while True:
         # Ask for Orchestrator IP and Port
         ORC_URL = get_orchestrator()
-
+        
         # Attempt to connect to Orchestrator
         status_url = f'{ORC_URL}/status'
         status_resp = requests.get(status_url)
@@ -368,9 +566,12 @@ if __name__ == "__main__":
                 view_search_inventory()
             
             case "10":
-                send_requests()
-            
+                simple_experiment()
+
             case "11":
+                simple_experiment_configurator()
+            
+            case "12":
                 reset_all_servers()
 
             case "debug":

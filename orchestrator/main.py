@@ -148,8 +148,8 @@ def get_inventory_map():
     db_session.refresh(inventory)
     return inventory
 
-@app.get("/latency")
-def latency_test():
+@app.get("/latency/{nil}")
+def latency_test(nil: Optional[str]):
     return {"row":"1","section":"101","seat":"1","location":1,"availability":"Available","transaction_id":None,"is_dirty":False,"desirability":8,"id":1,"price":457,"description":None,"on_backup":False}
 
 @app.get("/inventory/{item_id}")
