@@ -208,7 +208,8 @@ async def update_all_inventory(request: Request):
             setattr(inv_obj, key, item[key])
     db_session.commit() 
     db_session.close()
-    return {}
+    print("Inventory received and activated!")
+    return {"Status": "Activated"} 
 
 @app.get("/orchestrator/inventory")
 def retrieve_orchestrator_inventory():

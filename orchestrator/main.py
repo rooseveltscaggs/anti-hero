@@ -280,7 +280,9 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         dest_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/update'
         response = requests.request("PUT", dest_url, headers={}, json = reserved_inv)
 
+        print("Response received!")
         if response.ok:
+            print("Updating inventory on Orchestrator")
             # If the response status code is 200 (OK), parse the response as JSON
             # json_data = response.json()
             db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: dest_serv.id}, synchronize_session = False)
