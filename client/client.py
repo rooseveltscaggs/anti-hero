@@ -29,6 +29,7 @@ def range_to_list(range_string):
         else:
             # add single number to items
             items.append(int(entry))
+    return items
 
 def get_orchestrator():
     global ORC_IP
