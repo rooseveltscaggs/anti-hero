@@ -471,7 +471,7 @@ def simple_experiment(config_string=""):
     worker_count = int(config_arr[7])
     num_workers = min(int(mp.cpu_count() / 2), worker_count)
     for i in range(1, num_workers+1):
-        filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:7]}_worker_{i}.csv'
+        filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:12]}_worker_{i}.csv'
         process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, delay, inv_arr, "None",))
         process.start()
         if i == num_workers:
