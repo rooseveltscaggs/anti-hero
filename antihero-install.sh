@@ -9,10 +9,13 @@ echo "3) Client"
 echo -n "Enter Server Type to Install: "
 read x
 
-if [ $x == 1 ]; then
-  echo -n "Automatically initialize inventory? (y/n) "
-  read init
-fi
+echo -n "Automatically initialize inventory? (y/n) "
+read init
+
+# if [ $x == 1 ]; then
+#   echo -n "Automatically initialize inventory? (y/n) "
+#   read init
+# fi
 
 USER=$(whoami)
 # /Users/rscaggs/git/anti-hero
@@ -61,7 +64,7 @@ if [ $x == 1 ]; then
   if [ $init == "y" ]; then
     cd "$WORKDIR"
     source env/bin/activate
-    python3.10 orchestrator/generate_inventory_100.py
+    python3.10 orchestrator/generate_inventory.py
     deactivate
   fi
   sudo systemctl status antihero-orchestrator
@@ -82,6 +85,12 @@ elif [ $x == 2 ]; then
   sudo systemctl stop antihero-serverbg
   sudo systemctl start antihero-server
   sudo systemctl start antihero-serverbg
+  if [ $init == "y" ]; then
+    cd "$WORKDIR"
+    source env/bin/activate
+    python3.10 orchestrator/generate_inventory.py
+    deactivate
+  fi
   sudo systemctl status antihero-server
   sudo systemctl status antihero-serverbg
 
