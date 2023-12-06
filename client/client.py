@@ -150,8 +150,8 @@ def transfer_inventory():
         # If the response status code is 200 (OK), parse the response as JSON
         # json_data = response.json()
         print("Request sent... waiting for changes to propagate")
-        time.sleep(5)
-        sync_servers()
+        time.sleep(3)
+        # sync_servers()
         # update_inventory_map()
     else:
         print("Bad response from Orchestrator")
