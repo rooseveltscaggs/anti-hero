@@ -434,11 +434,11 @@ def simple_requests(filepath, start_time, stop_time, url,
 
 
 def simple_experiment(config_string=""):
-    config_arr = []
+    config_arr = config_string.split("|")
     while True:
-        if not config_string or len(config_arr) != 8:
+        if len(config_arr) != 8:
             config_string = input("Enter the configuration string for this experiment: ")
-        config_arr = config_string.split("|")
+            config_arr = config_string.split("|")
         if len(config_arr) == 8:
             break
         else:
