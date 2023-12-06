@@ -169,6 +169,8 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
     locations = db_session.query(Inventory.location).filter(Inventory.id.in_(ids)).group_by(Inventory.location).all()
     for location in locations:
         inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location[0], Inventory.id.in_(ids)).all()
+        print("Inventory Transfer: ")
+        print(inventory_ids)
         background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
     
     return {"Status": "Queued"}
