@@ -225,7 +225,7 @@ def send_inventory(server_id):
     db_session.commit()
     db_session.close()
 
-def transfer_inventory(inventory_ids, current_location, new_location, background_tasks: BackgroundTasks):
+def transfer_inventory(inventory_ids, current_location, new_location):
     request_time = datetime.utcnow()
     reserved_ids = []
     if current_location == 0:
@@ -284,9 +284,8 @@ def transfer_inventory(inventory_ids, current_location, new_location, background
             db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: dest_serv.id}, synchronize_session = False)
             db_session.commit()
     # Syncing servers
-    servers = db_session.query(Server).all()
-    for server_obj in servers:
-        background_tasks.add_task(send_inventory, server_obj.id)
+    if dest_serv.partner_id is not None:
+        send_inventory(dest_serv.partner_id)
     # db_session.close()
     return response
 
