@@ -180,7 +180,7 @@ def download_inventory_map(inv_id=None):
     
     if len(INVENTORY_MAP) > 1000:
         continue_download = input("Large download: continue inventory refresh? (y/n): ")
-        if continue_download.lower() == "y":
+        if continue_download.lower() != "y":
             return
                 
     print("Downloading inventory map from Orchestrator...")
