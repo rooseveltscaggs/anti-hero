@@ -448,7 +448,7 @@ def simple_experiment(config_string=""):
 
     experiment_name = config_arr[0]
 
-    delay = int(config_arr[1])
+    delay = float(config_arr[1])
 
     server = SERVER_MAP[int(config_arr[2])]
     endpoint_slug = SLUGS_ARR[int(config_arr[3])-1]
