@@ -85,7 +85,6 @@ def auto_register(request: Request, background_tasks: BackgroundTasks, hostname:
     servers = db_session.query(Server).all()
     for server_obj in servers:
         background_tasks.add_task(send_server_map, server_obj.id)
-        background_tasks.add_task(send_inventory, server_obj.id)
     return server.as_dict()
 
 @app.put("/servers/sync")
@@ -115,7 +114,7 @@ def create_server(host_ip: str, request: Request, background_tasks: BackgroundTa
 
 
 @app.put("/pair")
-def pair_servers(server1_id: int, server2_id: int):
+def pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundTasks):
     server1 = db_session.query(Server).filter(Server.id == server1_id).first()
     server2 = db_session.query(Server).filter(Server.id == server2_id).first()
     if server1 and server2:
@@ -129,6 +128,8 @@ def pair_servers(server1_id: int, server2_id: int):
                 server2.partner_id = server1_id
         db_session.commit()
         db_session.close()
+        background_tasks.add_task(send_inventory, server1_id)
+        background_tasks.add_task(send_inventory, server2_id)
         return {"Status": "Paired"}
     else:
         return {"Status": "Server(s) not found"}
@@ -202,20 +203,27 @@ def send_server_map(server_id):
     db_session.close()
 
 def send_inventory(server_id):
-    inventory = db_session.query(Inventory).all()
-    server = db_session.query(Server).filter(Server.id == server_id).first()
     inventory_list = []
+    server = db_session.query(Server).filter(Server.id == server_id).first()
+
+    if server.partner_id is not None:
+        backup_inventory = db_session.query(Inventory).filter(Inventory.location == server.partner_id).all()
+        for item in backup_inventory:
+            inventory_list.append(item.as_dict())
+            
+    inventory = db_session.query(Inventory).filter(Inventory.location == server_id).all()
     for item in inventory:
         inventory_list.append(item.as_dict())
-    if server:
-        server_url = f'http://{server.ip_address}:{server.port}/inventory/update'
-        response = requests.request("PUT", server_url, headers={}, json = inventory_list)
-        if response.ok:
-            server.last_updated = datetime.utcnow()
+
+    server_url = f'http://{server.ip_address}:{server.port}/inventory/update'
+    response = requests.request("PUT", server_url, headers={}, json = inventory_list)
+    if response.ok:
+        # db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: server_id}, synchronize_session=False)
+        server.last_updated = datetime.utcnow()
     db_session.commit()
     db_session.close()
 
-def transfer_inventory(inventory_ids, current_location, new_location):
+def transfer_inventory(inventory_ids, current_location, new_location, background_tasks: BackgroundTasks):
     request_time = datetime.utcnow()
     reserved_ids = []
     if current_location == 0:
@@ -237,7 +245,6 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             inv = db_session.query(Inventory).filter(Inventory.id == inv_id).first()
             if not existing_res:
                 reserved_ids.append(inv_id)
-                inv.location = new_location
                 res.status = "Reserved"
             else:
                 res.status = "Cancelled"
@@ -270,7 +277,11 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             # json_data = response.json()
             db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: dest_serv.id}, synchronize_session = False)
             db_session.commit()
-    db_session.close()
+    # Syncing servers
+    servers = db_session.query(Server).all()
+    for server_obj in servers:
+        background_tasks.add_task(send_inventory, server_obj.id)
+    # db_session.close()
     return response
 
 @app.put("/reset")

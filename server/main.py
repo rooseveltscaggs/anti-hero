@@ -246,7 +246,7 @@ def deactivate_inventory(ids: List[int], new_location: int):
         db_session.add(res)
     db_session.commit()
     db_session.close()
-    time.sleep(5)
+    time.sleep(2)
     # If stored on Orchestrator
     # Create reservation on Orchestrator
     # Wait 5 seconds (resolution period)
@@ -257,7 +257,8 @@ def deactivate_inventory(ids: List[int], new_location: int):
         inv = db_session.query(Inventory).filter(Inventory.id == inv_id).first()
         if not existing_res:
             reserved_ids.append(inv_id)
-            inv.location = new_location
+            # This will update to backup (if applicable) once synchronization takes place
+            inv.location = 0
             res.status = "Reserved"
         else:
             res.status = "Cancelled"
@@ -285,7 +286,7 @@ def buy_inventory(ids: List[int]):
         db_session.add(res)
     db_session.commit()
     db_session.close()
-    time.sleep(5)
+    time.sleep(2)
     # If stored on Orchestrator
     # Create reservation on Orchestrator
     # Wait 5 seconds (resolution period)
@@ -387,7 +388,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
             db_session.add(res)
         db_session.commit()
         db_session.close()
-        time.sleep(5)
+        time.sleep(2)
         # If stored on Orchestrator
         # Create reservation on Orchestrator
         # Wait 5 seconds (resolution period)
