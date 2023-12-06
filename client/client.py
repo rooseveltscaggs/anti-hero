@@ -314,6 +314,10 @@ def simple_experiment_configurator():
     
     config_string += ("|" + end_time_value.isoformat()[:19])
 
+    # Inventory Range to Request
+    worker_count = input("Enter number of parallel workers to run: ")
+    config_string += ("|" + worker_count)
+
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
 
@@ -416,10 +420,10 @@ def simple_requests(filepath, start_time, stop_time, url,
                 if response.ok:
                     csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
                 else:
-                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, descriptor])
+                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, response.status_code])
             except requests.exceptions.RequestException as e:
                 # print(f"Error: {e}")
-                csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, descriptor])
+                csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, e])
             time.sleep(delay)
 
 
@@ -428,7 +432,7 @@ def simple_experiment():
     while True:
         config_string = input("Enter the configuration string for this experiment: ")
         config_arr = config_string.split("|")
-        if len(config_arr) == 7:
+        if len(config_arr) == 8:
             break
         else:
             print("Invalid configuration string: wrong number of args")
@@ -450,8 +454,9 @@ def simple_experiment():
     stop_time = datetime.datetime.fromisoformat(config_arr[6])
     
     os.makedirs("experiments/" + experiment_name)
-    
-    num_workers = int(mp.cpu_count() / 2)
+
+    worker_count = int(config_arr[7])
+    num_workers = min(int(mp.cpu_count() / 2), worker_count)
     for i in range(1, num_workers+1):
         filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:7]}_worker_{i}.csv'
         process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, delay, inv_arr, "None",))
@@ -459,6 +464,7 @@ def simple_experiment():
         if i == num_workers:
             print("Workers started, running experiment...")
             process.join()
+    print("Experiment complete!")
 
 
 def send_requests():
