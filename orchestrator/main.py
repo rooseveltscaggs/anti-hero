@@ -273,7 +273,9 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         reserved_inv = []
         inventory_to_transfer = db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).all()
         for inv_item in inventory_to_transfer:
-            reserved_inv.append(inv_item.as_dict())
+            item = inv_item.as_dict()
+            item["location"] = new_location
+            reserved_inv.append(item)
 
         dest_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/update'
         response = requests.request("PUT", dest_url, headers={}, json = reserved_inv)
