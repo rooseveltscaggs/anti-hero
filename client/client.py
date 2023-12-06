@@ -175,7 +175,7 @@ def download_inventory_map(inv_id=None):
         if servers_resp.ok:
             # If the response status code is 200 (OK), parse the response as JSON
             json_obj = servers_resp.json()
-            INVENTORY_MAP[inv_id] = json_obj
+            INVENTORY_MAP[int(inv_id)] = json_obj
         return
     
     if len(INVENTORY_MAP) > 1000:
@@ -230,6 +230,7 @@ def disable_server():
         print("Error sending request")
 
 def view_search_inventory():
+    global INVENTORY_MAP
     download_inventory_map()
     print('\n-- Inventory Preview --')
     preview_max = max(0, len(INVENTORY_MAP))
