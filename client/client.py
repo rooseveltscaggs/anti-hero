@@ -6,6 +6,7 @@ import time
 import csv
 import random
 import re
+import os
 
 ORC_URL = ""
 ORC_IP = ""
@@ -447,7 +448,7 @@ def simple_experiment():
     start_time = datetime.datetime.fromisoformat(config_arr[5])
     stop_time = datetime.datetime.fromisoformat(config_arr[6])
     
-
+    os.makedirs("experiments/" + experiment_name)
     
     num_workers = int(mp.cpu_count() / 2)
     for i in range(1, num_workers+1):
