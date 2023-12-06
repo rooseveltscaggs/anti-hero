@@ -177,6 +177,11 @@ def download_inventory_map(inv_id=None):
             json_obj = servers_resp.json()
             INVENTORY_MAP[inv_id] = json_obj
         return
+    
+    if len(INVENTORY_MAP) > 1000:
+        continue_download = input("Large download: continue inventory refresh? (y/n): ")
+        if continue_download.lower() == "y":
+            return
                 
     print("Downloading inventory map from Orchestrator...")
     servers_url = f'{ORC_URL}/inventory'
