@@ -322,6 +322,10 @@ def simple_experiment_configurator():
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
 
+    run_now = input("Run this config now? (y/n)")
+    if run_now.lower() == "y":
+        simple_experiment(config_string)
+
 
 # retry_count = -1, 0, 1+
 # If count == 0, continue to next request
@@ -429,9 +433,10 @@ def simple_requests(filepath, start_time, stop_time, url,
 
 
 
-def simple_experiment():
+def simple_experiment(config_string=None):
     while True:
-        config_string = input("Enter the configuration string for this experiment: ")
+        if not config_string or len(config_arr) != 8:
+            config_string = input("Enter the configuration string for this experiment: ")
         config_arr = config_string.split("|")
         if len(config_arr) == 8:
             break
