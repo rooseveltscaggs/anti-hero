@@ -437,7 +437,7 @@ def simple_experiment():
 
     delay = int(config_arr[1])
 
-    server = SERVER_MAP[config_arr[2]]
+    server = SERVER_MAP[int(config_arr[2])]
     endpoint_slug = SLUGS_ARR[int(config_arr[3])]
     server_url = f'http://{server["ip_address"]}:{server["port"]}{endpoint_slug}'
 
