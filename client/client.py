@@ -95,7 +95,7 @@ def main_menu():
     print("9) View/Search Inventory")
     print("10) Send Automated Requests (Simple)")
     print("11) Simple Experiment Configurator")
-    print("12) Reset All Servers")
+    print("RESET) Reset All Servers")
     print("\n")
     return input("Enter the number of an option above: ")
 
@@ -513,7 +513,7 @@ def reset_all_servers():
         server_url = f'http://{server["hostname"]}:{server["port"]}/reset'
         requests.request("PUT", server_url)
     
-    orc_reset_url = f'http://{server["hostname"]}:{server["port"]}/reset'
+    orc_reset_url = f'http://{ORC_IP}:{ORC_PORT}/reset'
     requests.request("PUT", orc_reset_url)
     print("Request(s) sent!")
 
@@ -573,7 +573,7 @@ if __name__ == "__main__":
             case "11":
                 simple_experiment_configurator()
             
-            case "12":
+            case "RESET":
                 reset_all_servers()
 
             case "debug":
