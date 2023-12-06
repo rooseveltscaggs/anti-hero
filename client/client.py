@@ -322,7 +322,7 @@ def simple_experiment_configurator():
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
 
-    run_now = input("Run this config now? (y/n)")
+    run_now = input("Run this config now? (y/n) ")
     if run_now.lower() == "y":
         simple_experiment(config_string)
 
