@@ -77,7 +77,6 @@ def register_new_server():
     autoreg_url = server_url + orc_autoreg_slug
     print("Instructing server to automatically register with Orchestrator...")
     requests.request("POST", autoreg_url)
-    sync_servers()
     download_server_map()
 
 def main_menu():
