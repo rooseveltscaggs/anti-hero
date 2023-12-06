@@ -23,14 +23,14 @@ def generate_random_string(length):
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
 
-def update_server_status(server_id):
+async def update_server_status(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
     if server:
         url = f'http://{server.ip_address}:{server.port}/status'
         response = requests.get(url)
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
-            json_data = response.json()
+            json_data = await response.json()
             server.status = json_data['status']
             server.last_updated = datetime.utcnow()
 
@@ -76,7 +76,7 @@ def retrieve_registry(key, default=None):
         
     return default
 
-def update_server_map():
+async def update_server_map():
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     
@@ -84,7 +84,7 @@ def update_server_map():
     response = requests.request("GET", url)
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = response.json()
+        json_data = await response.json()
         for server_obj in json_data:
             server = db_session.query(Server).filter(Server.id == server_obj["id"]).first()
             if not server:
@@ -162,7 +162,7 @@ def update_orchestrator(ip_address: str, port: str):
     return {"Status": "Updated"}
 
 @app.post("/orchestrator/register")
-def register_with_orchestrator(port: Optional[str] = "80"):
+async def register_with_orchestrator(port: Optional[str] = "80"):
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     if not orc_ip:
@@ -174,7 +174,7 @@ def register_with_orchestrator(port: Optional[str] = "80"):
 
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = response.json()
+        json_data = await response.json()
         print(json_data)
         store_registry("Server_ID", json_data['id'])
         return json_data
@@ -212,7 +212,7 @@ async def update_all_inventory(request: Request):
     return {"Status": "Activated"} 
 
 @app.get("/orchestrator/inventory")
-def retrieve_orchestrator_inventory():
+async def retrieve_orchestrator_inventory():
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     
@@ -220,7 +220,7 @@ def retrieve_orchestrator_inventory():
     response = requests.request("GET", url)
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = response.json()
+        json_data = await response.json()
         for item in json_data:
             inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
             if not inv_obj:
@@ -365,78 +365,6 @@ def get_item_status(item_id: int):
         raise HTTPException(status_code=404, detail="Item not found")
     return inventory
 
-@app.put("/inventory/transfer")
-def initiate_transfer(ids: List[int], destination: int, background_tasks: BackgroundTasks):
-    # data = request.json()
-    # ids = data['ids']
-    # Event.resource_id == row.id) & (Event.weekday.contains(weekdayAbbrev[i])) & (Event.recurrence_type.in_(['Weekly', 'Monthly'])
-    # session.query(Table.column, 
-#    func.count(Table.column)).group_by(Table.column).all()
-    db_session.commit()
-    locations = db_session.query(Inventory.location).filter(Inventory.id.in_(ids)).group_by(Inventory.location).all()
-    for location in locations:
-        inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location).all()
-        background_tasks.add_task(transfer_inventory, inventory_ids, location, destination)
-    
-    return {"Status": "Queued"}
-
-def transfer_inventory(inventory_ids, current_location, new_location):
-    request_time = datetime.utcnow()
-    reserved_ids = []
-    if current_location == 0:
-        for inv_id in inventory_ids:
-            res = Reservation(server_id=new_location, inventory_id=inv_id, reserve_datetime=request_time, expiry_time=request_time+timedelta(minutes=5), status="Requested")
-            db_session.add(res)
-        db_session.commit()
-        db_session.close()
-        time.sleep(2)
-        # If stored on Orchestrator
-        # Create reservation on Orchestrator
-        # Wait 5 seconds (resolution period)
-        # Begin transfer to new location
-        for inv_id in inventory_ids:
-            existing_res = db_session.query(Reservation).filter(Reservation.inventory_id == inv_id, Reservation.server_id != new_location, Reservation.status != 'Cancelled', Reservation.reserve_datetime <= request_time, Reservation.expiry_time > datetime.utcnow()).first()
-            res = db_session.query(Reservation).filter(Reservation.inventory_id == inv_id, Reservation.server_id == new_location, Reservation.reserve_datetime == request_time).first()
-            inv = db_session.query(Inventory).filter(Inventory.id == inv_id).first()
-            if not existing_res:
-                reserved_ids.append(inv_id)
-                inv.location = new_location
-                res.status = "Reserved"
-            else:
-                res.status = "Cancelled"
-        db_session.commit()
-        
-            
-    else:
-        curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
-        if curr_serv:
-            curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/deactivate'
-            payload = {
-                "q" : inventory_ids
-            }
-            response = requests.request("PUT", curr_url, headers={}, params = payload)
-
-            if response.ok:
-                # If the response status code is 200 (OK), parse the response as JSON
-                json_data = response.json()
-                reserved_ids = json_data['reserved_ids']
-        
-    dest_serv = db_session.query(Server).filter(Server.id == new_location).first()
-    if dest_serv:
-        # request inventory from current server
-        # api route: /inventory/lock
-
-        curr_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/activate'
-        payload = {
-            "q" : inventory_ids
-        }
-        response = requests.request("PUT", curr_url, headers={}, params = payload)
-
-        if response.ok:
-            # If the response status code is 200 (OK), parse the response as JSON
-            json_data = response.json()
-    db_session.close()
-    return response
 
 @app.put("/reset")
 def reset():
