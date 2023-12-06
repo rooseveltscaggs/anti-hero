@@ -434,7 +434,6 @@ def simple_experiment():
     SLUGS_ARR = ['/latency', '/inventory', '/inventory/buy']
 
     experiment_name = config_arr[0]
-    filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:7]}_worker_{i}.csv'
 
     delay = int(config_arr[1])
 
@@ -452,6 +451,7 @@ def simple_experiment():
     
     num_workers = int(mp.cpu_count() / 2)
     for i in range(1, num_workers+1):
+        filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:7]}_worker_{i}.csv'
         process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, delay, inv_arr, "None",))
         process.start()
         if i == num_workers:
