@@ -433,7 +433,8 @@ def simple_requests(filepath, start_time, stop_time, url,
 
 
 
-def simple_experiment(config_string=None):
+def simple_experiment(config_string=""):
+    config_arr = []
     while True:
         if not config_string or len(config_arr) != 8:
             config_string = input("Enter the configuration string for this experiment: ")
