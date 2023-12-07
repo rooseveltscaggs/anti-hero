@@ -80,12 +80,13 @@ def auto_register(request: Request, background_tasks: BackgroundTasks, hostname:
         server = Server(hostname=hostname, ip_address=host_ip, port=port)
         db_session.add(server)
         db_session.commit()
+        server = server.as_dict()
         db_session.close()
         # return {"host_ip": host_ip, "hostname": hostname, "server_id": server.id}
     servers = db_session.query(Server).all()
     for server_obj in servers:
         background_tasks.add_task(send_server_map, server_obj.id)
-    return server.as_dict()
+    return server
 
 @app.put("/servers/sync")
 def sync_all_servers(background_tasks: BackgroundTasks):

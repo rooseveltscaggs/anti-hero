@@ -175,6 +175,7 @@ async def register_with_orchestrator(port: Optional[str] = "80"):
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
         json_data = await response.json()
+        print("Autoregister Data:")
         print(json_data)
         store_registry("Server_ID", json_data['id'])
         return json_data
