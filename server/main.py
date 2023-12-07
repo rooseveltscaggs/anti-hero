@@ -23,14 +23,14 @@ def generate_random_string(length):
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
 
-async def update_server_status(server_id):
+def update_server_status(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
     if server:
         url = f'http://{server.ip_address}:{server.port}/status'
         response = requests.get(url)
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
-            json_data = await response.json()
+            json_data = response.json()
             server.status = json_data['status']
             server.last_updated = datetime.utcnow()
 
@@ -76,7 +76,7 @@ def retrieve_registry(key, default=None):
         
     return default
 
-async def update_server_map():
+def update_server_map():
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     
@@ -84,7 +84,7 @@ async def update_server_map():
     response = requests.request("GET", url)
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = await response.json()
+        json_data = response.json()
         for server_obj in json_data:
             server = db_session.query(Server).filter(Server.id == server_obj["id"]).first()
             if not server:
@@ -104,8 +104,8 @@ async def update_server_map():
         return {}
 
 @app.put("/servers")
-async def update_all_servers(request: Request):
-    json_data = await request.json()
+def update_all_servers(request: Request):
+    json_data = request.json()
     for server_obj in json_data:
         server = db_session.query(Server).filter(Server.id == server_obj["id"]).first()
         if not server:
@@ -162,7 +162,7 @@ def update_orchestrator(ip_address: str, port: str):
     return {"Status": "Updated"}
 
 @app.post("/orchestrator/register")
-async def register_with_orchestrator(port: Optional[str] = "80"):
+def register_with_orchestrator(port: Optional[str] = "80"):
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     if not orc_ip:
@@ -174,7 +174,7 @@ async def register_with_orchestrator(port: Optional[str] = "80"):
 
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = await response.json()
+        json_data = response.json()
         print("Autoregister Data:")
         print(json_data)
         store_registry("Server_ID", json_data['id'])
@@ -197,8 +197,8 @@ def forwarded_request(ids: List[int]):
         return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
 
 @app.put("/inventory/update")
-async def update_all_inventory(request: Request):
-    json_data = await request.json()
+def update_all_inventory(request: Request):
+    json_data = request.json()
     print(json_data)
     for item in json_data:
         inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
@@ -213,7 +213,7 @@ async def update_all_inventory(request: Request):
     return {"Status": "Activated"} 
 
 @app.get("/orchestrator/inventory")
-async def retrieve_orchestrator_inventory():
+def retrieve_orchestrator_inventory():
     orc_ip = retrieve_registry("Orchestrator_IP")
     orc_port = retrieve_registry("Orchestrator_Port")
     
@@ -221,7 +221,7 @@ async def retrieve_orchestrator_inventory():
     response = requests.request("GET", url)
     if response.ok:
         # If the response status code is 200 (OK), parse the response as JSON
-        json_data = await response.json()
+        json_data = response.json()
         for item in json_data:
             inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
             if not inv_obj:
