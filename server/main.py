@@ -104,8 +104,8 @@ def update_server_map():
         return {}
 
 @app.put("/servers")
-def update_all_servers(request: Request):
-    json_data = request.json()
+async def update_all_servers(request: Request):
+    json_data = await request.json()
     for server_obj in json_data:
         server = db_session.query(Server).filter(Server.id == server_obj["id"]).first()
         if not server:
@@ -197,8 +197,8 @@ def forwarded_request(ids: List[int]):
         return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
 
 @app.put("/inventory/update")
-def update_all_inventory(request: Request):
-    json_data = request.json()
+async def update_all_inventory(request: Request):
+    json_data = await request.json()
     print(json_data)
     for item in json_data:
         inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
