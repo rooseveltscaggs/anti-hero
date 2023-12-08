@@ -326,6 +326,10 @@ def simple_experiment_configurator():
     worker_count = input("Enter number of parallel workers to run: ")
     config_string += ("|" + worker_count)
 
+    # Inventory Range to Request
+    contact_backup = input("Contact backup on bad response? (y/n): ")
+    config_string += ("|" + contact_backup)
+
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
 
@@ -408,11 +412,14 @@ def simple_experiment_configurator():
 
 # retry_count = -1, 0, 1+
 # If count == 0, continue to next request
-def simple_requests(filepath, start_time, stop_time, url, 
-                    delay, inv_array, descriptor="None"):
+def simple_requests(filepath, start_time, stop_time, server_url, 
+                    backup_url, delay, inv_array, descriptor="None"):
     with open(filepath, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Endpoint', 'InventoryID', 'Descriptor'])
+        can_request_backup = False
+        if backup_url is not None:
+            can_request_backup = True
 
         print("Waiting for experiment start time...")
         while start_time > datetime.datetime.utcnow():
@@ -420,10 +427,12 @@ def simple_requests(filepath, start_time, stop_time, url,
 
         print("Beginning experiment...")
         while stop_time > datetime.datetime.utcnow():
+            bad_resp = False
+            # -1: no backup, 0: no backup, 1: backup
             # Choose inventory ID from range array (random or linear)
             inv_id = random.choice(inv_array)
             # Build URL (based on endpoint + inventory ID)
-            curr_url = url + "/" + str(inv_id)
+            curr_url = server_url + "/" + str(inv_id)
             # Send request
             try:
                 request_datetime = str(datetime.datetime.utcnow())
@@ -433,9 +442,26 @@ def simple_requests(filepath, start_time, stop_time, url,
                     csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
                 else:
                     csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, response.status_code])
+                    bad_resp = True
             except requests.exceptions.RequestException as e:
                 # print(f"Error: {e}")
                 csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, e])
+                bad_resp = True
+            
+            if bad_resp and can_request_backup:
+                # send request to backup and record
+                try:
+                    curr_url = backup_url + "/" + str(inv_id)
+                    request_datetime = str(datetime.datetime.utcnow())
+                    response = requests.get(curr_url)
+                    response_datetime = str(datetime.datetime.utcnow())
+                    if response.ok:
+                        csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
+                    else:
+                        csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, response.status_code])
+                except requests.exceptions.RequestException as e:
+                    # print(f"Error: {e}")
+                    csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, e])
             time.sleep(delay)
 
 
@@ -443,7 +469,7 @@ def simple_requests(filepath, start_time, stop_time, url,
 def simple_experiment(config_string=""):
     config_arr = config_string.split("|")
     while True:
-        if len(config_arr) != 8:
+        if len(config_arr) != 9:
             config_string = input("Enter the configuration string for this experiment: ")
             config_arr = config_string.split("|")
         if len(config_arr) == 8:
@@ -456,10 +482,17 @@ def simple_experiment(config_string=""):
     experiment_name = config_arr[0]
 
     delay = float(config_arr[1])
+    endpoint_slug = SLUGS_ARR[int(config_arr[3])-1]
 
     server = SERVER_MAP[int(config_arr[2])]
-    endpoint_slug = SLUGS_ARR[int(config_arr[3])-1]
     server_url = f'http://{server["ip_address"]}:{server["port"]}{endpoint_slug}'
+
+    if server.get("partner_id", None) and config_arr[8].lower() == 'y':
+        backup = SERVER_MAP[server["partner_id"]]
+        backup_url = f'http://{backup["ip_address"]}:{backup["port"]}{endpoint_slug}'
+    else:
+        backup_url = None
+    
 
     inv_range_string  = config_arr[4]
     inv_arr = range_to_list(inv_range_string)
@@ -473,7 +506,7 @@ def simple_experiment(config_string=""):
     num_workers = min(int(mp.cpu_count() / 2), worker_count)
     for i in range(1, num_workers+1):
         filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:12]}_worker_{i}.csv'
-        process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, delay, inv_arr, "None",))
+        process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, backup_url, delay, inv_arr, "None",))
         process.start()
         if i == num_workers:
             print("Workers started, running experiment...")
