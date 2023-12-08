@@ -296,7 +296,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 
 @app.put("/reset")
 def reset():
-    default_dict = {
+    default_inv_dict = {
         Inventory.availability: "Available",
         Inventory.is_dirty: False,
         Inventory.location: 0,
@@ -304,6 +304,12 @@ def reset():
         Inventory.transaction_id: None
     }
 
-    db_session.query(Inventory).update(default_dict, synchronize_session = False)
+    default_server_dict = {
+        Server.in_failure: False,
+        Server.in_backup: False
+    }
+
+    db_session.query(Inventory).update(default_inv_dict, synchronize_session = False)
+    db_session.query(Server).update(default_server_dict, synchronize_session=False)
     db_session.commit()
     db_session.close()
