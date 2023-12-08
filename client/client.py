@@ -472,7 +472,7 @@ def simple_experiment(config_string=""):
         if len(config_arr) != 9:
             config_string = input("Enter the configuration string for this experiment: ")
             config_arr = config_string.split("|")
-        if len(config_arr) == 8:
+        if len(config_arr) == 9:
             break
         else:
             print("Invalid configuration string: wrong number of args")
