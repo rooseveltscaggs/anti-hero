@@ -278,6 +278,7 @@ def simple_experiment_configurator():
     print("\n---- Start Time Options ----")
     print("Text entered can be relative (h, m, s) or absolute (UTC)")
     print("Examples: 10m, 10s, 2023-12-05T01:45:00")
+    print(f"Current Datetime (UTC): {datetime.datetime.utcnow().isoformat()}")
     start_time_string = input("Enter a start time for the experiment: ") or "1m"
     last_char = (start_time_string[len(start_time_string)-1:len(start_time_string)]).lower()
     start_time_interval = start_time_string[:len(start_time_string)-1]
@@ -300,6 +301,7 @@ def simple_experiment_configurator():
     print("\n---- End Time Options ----")
     print("Text entered can be relative to start time (h, m, s) or absolute (UTC)")
     print("Examples: 10m, 10s, 2023-12-05T01:45:00")
+    print(f"Current Datetime (UTC): {datetime.datetime.utcnow().isoformat()}")
     end_time_string = input("Enter an end time for the experiment: ") or "1m"
     last_char = (end_time_string[len(end_time_string)-1:len(end_time_string)]).lower()
     end_time_interval = end_time_string[:len(end_time_string)-1]
