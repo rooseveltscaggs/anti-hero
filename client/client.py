@@ -416,7 +416,7 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                     backup_url, delay, inv_array, descriptor="None"):
     with open(filepath, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Endpoint', 'InventoryID', 'Descriptor'])
+        csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Order', 'Endpoint', 'InventoryID', 'Descriptor'])
         can_request_backup = False
         if backup_url is not None:
             can_request_backup = True
@@ -439,13 +439,13 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                 response = requests.get(curr_url, timeout=3)
                 response_datetime = str(datetime.datetime.utcnow())
                 if response.ok:
-                    csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
+                    csv_writer.writerow([request_datetime, response_datetime, 'Success', 'Primary', curr_url, inv_id, descriptor])
                 else:
-                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, response.status_code])
+                    csv_writer.writerow([request_datetime, response_datetime, 'Failure', 'Primary', curr_url, inv_id, response.status_code])
                     bad_resp = True
             except requests.exceptions.RequestException as e:
                 # print(f"Error: {e}")
-                csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, e])
+                csv_writer.writerow([request_datetime, "N/A", 'Failure', 'Primary', curr_url, inv_id, e])
                 bad_resp = True
             
             if bad_resp and can_request_backup:
@@ -456,12 +456,12 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                     response = requests.get(curr_url, timeout=3)
                     response_datetime = str(datetime.datetime.utcnow())
                     if response.ok:
-                        csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
+                        csv_writer.writerow([request_datetime, response_datetime, 'Success', 'Backup', curr_url, inv_id, descriptor])
                     else:
-                        csv_writer.writerow([request_datetime, response_datetime, 'Failure', curr_url, inv_id, response.status_code])
+                        csv_writer.writerow([request_datetime, response_datetime, 'Failure', 'Backup', curr_url, inv_id, response.status_code])
                 except requests.exceptions.RequestException as e:
                     # print(f"Error: {e}")
-                    csv_writer.writerow([request_datetime, "N/A", 'Failure', curr_url, inv_id, e])
+                    csv_writer.writerow([request_datetime, "N/A", 'Failure', 'Backup', curr_url, inv_id, e])
             time.sleep(delay)
 
 
