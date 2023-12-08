@@ -379,6 +379,6 @@ def reset():
 
     store_registry("Last_Heartbeat", None)
     store_registry("In_Backup", False)
-    db_session.query(Inventory).update(default_dict, synchronize_session = False)
+    db_session.query(Inventory).delete(synchronize_session=False)
     db_session.commit()
     db_session.close()
