@@ -436,7 +436,7 @@ def simple_requests(filepath, start_time, stop_time, server_url,
             # Send request
             try:
                 request_datetime = str(datetime.datetime.utcnow())
-                response = requests.get(curr_url)
+                response = requests.get(curr_url, timeout=3)
                 response_datetime = str(datetime.datetime.utcnow())
                 if response.ok:
                     csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
@@ -453,7 +453,7 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                 try:
                     curr_url = backup_url + "/" + str(inv_id)
                     request_datetime = str(datetime.datetime.utcnow())
-                    response = requests.get(curr_url)
+                    response = requests.get(curr_url, timeout=3)
                     response_datetime = str(datetime.datetime.utcnow())
                     if response.ok:
                         csv_writer.writerow([request_datetime, response_datetime, 'Success', curr_url, inv_id, descriptor])
