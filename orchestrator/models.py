@@ -46,22 +46,26 @@ class Server(Base):
        return self_dict
 
 class Inventory(Base):
-    __tablename__ = 'inventory'
-    id = Column(Integer(), primary_key=True, nullable=False)
-    section = Column(String(), nullable=True)
-    row = Column(String(), nullable=True)
-    seat = Column(String(), nullable=True)
-    desirability = Column(Integer(), nullable=True)
-    location = Column(Integer(), nullable=True)
-    price = Column(Integer(), nullable=True)
-    availability = Column(String(), nullable=True)
-    description = Column(String(), nullable=True)
-    transaction_id = Column(String(), nullable=True)
-    on_backup = Column(Boolean(), nullable=True)
-    is_dirty = Column(Boolean(), nullable=True)
+   __tablename__ = 'inventory'
+   id = Column(Integer(), primary_key=True, nullable=False)
+   section = Column(String(), nullable=True)
+   row = Column(String(), nullable=True)
+   seat = Column(String(), nullable=True)
+   desirability = Column(Integer(), nullable=True)
+   location = Column(Integer(), nullable=True)
+   price = Column(Integer(), nullable=True)
+   availability = Column(String(), nullable=True)
+   description = Column(String(), nullable=True)
+   transaction_id = Column(String(), nullable=True)
+   on_backup = Column(Boolean(), nullable=True)
+   is_dirty = Column(Boolean(), nullable=True)
+   activated = Column(Boolean(), nullable=True)
+   locked = Column(Boolean(), nullable=True)
+   status_last_updated = Column(DateTime(), nullable=True)
+   last_modified_by = Column(String(), nullable=True)
 
-    def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+   def as_dict(self):
+      return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class WorkerTask(Base):
     __tablename__ = 'worker_tasks'

@@ -59,6 +59,10 @@ class Inventory(Base):
     transaction_id = Column(String(), nullable=True)
     on_backup = Column(Boolean(), nullable=True)
     is_dirty = Column(Boolean(), nullable=True)
+    activated = Column(Boolean(), nullable=True)
+    locked = Column(Boolean(), nullable=True)
+    status_last_updated = Column(DateTime(), nullable=True)
+    last_modified_by = Column(String(), nullable=True)
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -88,4 +92,5 @@ class Reservation(Base):
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+    
     

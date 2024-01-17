@@ -87,21 +87,24 @@ def request_authority():
     orc_port = retrieve_registry("Orchestrator_Port")
     curr_url = f'http://{orc_ip}:{orc_port}/failure?failed_server_id={partner_id}&backup_server_id={server_id}'
     
-    try:
-        response = requests.request("PUT", curr_url)
-    except requests.exceptions.HTTPError as errh:
-        print ("Http Error:",errh)
-    except requests.exceptions.ConnectionError as errc:
-        print ("Error Connecting:",errc)
-    except requests.exceptions.Timeout as errt:
-        print ("Timeout Error:",errt)
-    except requests.exceptions.RequestException as err:
-        print ("Oops: Something Else",err)
+    while True:
+        try:
+            response = requests.request("PUT", curr_url)
+            break
+        except requests.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+        except requests.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+        except requests.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+        except requests.exceptions.RequestException as err:
+            print ("Oops: Something Else",err)
 
     if response.ok:
         store_registry("In_Backup", True)
         return True
     else:
+        # Need to set self as failed and request recovery/healing
         return False
 
 def update_authority():
@@ -111,6 +114,10 @@ def update_authority():
     db_session.commit()
     db_session.close()
     return True
+
+def attempt_recovery():
+    # 
+    pass
 
 def failure_detection():
     print("Background failure detection is running...")
@@ -125,11 +132,16 @@ def failure_detection():
                 # Check heartbeat
                 last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
                 expiry = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT)
+                # In the instance of a self-failure, this expiry should already be passed
                 if last_heartbeat < expiry:
                     authority = request_authority()
                     if authority:
                         print("Authority granted.. updating data")
                         update_authority()
+                    else:
+                        print("Authority denied... attempting recovery")
+                        store_registry("Status", "Disabled")
+                        attempt_recovery()
             db_session.close()
         else:
             print("No Timeout: No partner found...")
