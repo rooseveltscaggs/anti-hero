@@ -9,6 +9,7 @@ import models
 import requests
 import time
 import string
+import collections
 import random
 from models import Server, Inventory, Reservation, RegistryEntry
 
@@ -280,22 +281,33 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
     return deactivated_ids
 
 
-def send_and_activate(server_id, inventory_ids):
+def send_and_activate(destination_server, inventory_ids):
     CHUNK_SIZE = 1000
-    curr_serv = db_session.query(Server).filter(Server.id == server_id).first()
+    curr_serv = db_session.query(Server).filter(Server.id == destination_server).first()
+    backup_serv = db_session.query(Server).filter(Server.id == curr_serv.partner_id).first()
     curr_idx = 0
     # Setting inventory to new worker node location
-    db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: server_id}, synchronize_session=False)
+    db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server}, synchronize_session=False)
     db_session.commit()
     db_session.close()
     while curr_idx < len(inventory_ids):
+        backup_response = False
         chunk = inventory_ids[curr_idx:curr_idx+CHUNK_SIZE]
-        chunk_query = db_session.query(Inventory).filter(Inventory.id.in_(chunk), Inventory.location == server_id)
+        chunk_query = db_session.query(Inventory).filter(Inventory.id.in_(chunk), Inventory.location == destination_server)
         chunk_data = chunk_query.all()
-        # sending chunk
+        # if partner, send data chunk to backup (partner)
+        if backup_serv:
+            back_url = f'http://{backup_serv.ip_address}:{backup_serv.port}/inventory/update'
+            upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
+            backup_response = (upd_response.ok)
+        # sending data chunk to primary
         curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/update'
         upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
-        # If unactivated data successfully received, send activate command
+        
+        # If unactivated data successfully received by primary (& backup if applicable), send activate command
+        if backup_response:
+            curr_url = f'http://{backup_serv.ip_address}:{backup_serv.port}/inventory/activate'
+            active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
         if upd_response.ok:
             curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/activate'
             active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
@@ -308,75 +320,24 @@ def send_and_activate(server_id, inventory_ids):
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
-    # Send inventory located on this Orchestrator (location = 0)
+    # Check if current server has partner
+    current_server = db_session.query(Server).filter(Server.id == current_location).first()
+    curr_partner_id = current_server.partner_id
 
-    # Attempt to reserve/deactivate inventory on current location
-        # Paginate reserved inventory and send to new location
-        # After successful send, update Orchestrator DB with new location
-    if current_location != 0:
-    # Send successfully deactivated inventory to new_location (lock and send)
+    deactivated_ids_partner = inventory_ids
+    # If partner, send (non-writing) deactivation request to partner
+    if curr_partner_id:
+        deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
     
-    transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
-    reserved_ids = []
-    if current_location == 0:
-        # If stored on Orchestrator, lock data first then query for successfully locked data
-        db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), 
-                                           Inventory.location == 0, 
-                                           Inventory.locked == False).update({Inventory.locked: True, Inventory.last_modified_by: transaction_id}, synchronize_session = False)
-        db_session.commit()
-        db_session.close()
-    else:
-        curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
-        CHUNK_SIZE = 1000
-        if curr_serv:
-            curr_index = 0
-            while curr_index < len(inventory_ids)-1:
-                ids_chunk = inventory_ids[curr_index: curr_index+CHUNK_SIZE]
-                curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/deactivate'
-                response = requests.request("PUT", curr_url, headers={}, json = ids_chunk)
-                if response.ok:
-                    # If the response status code is 200 (OK), parse the response as JSON
-                    json_data = response.json()
-                    deactivated_inventory = json_data['deactivated_inventory']
+    # Then send (writing) deactivation request to main node
+    deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
 
-                    for item in deactivated_inventory:
-                        inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id']).first()
-                        if not inv_obj:
-                            inv_obj = Inventory()
-                            db_session.add(inv_obj)
-                        for key in item.keys():
-                            setattr(inv_obj, key, item[key])
-                    db_session.commit() 
-                    db_session.close()
-                curr_index = curr_index+CHUNK_SIZE+1
-        if curr_serv.partner_id
-        
-    dest_serv = db_session.query(Server).filter(Server.id == new_location).first()
-    if dest_serv:
-        # request inventory from current server
-        # api route: /inventory/lock
-        reserved_inv = []
-        inventory_to_transfer = db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).all()
-        for inv_item in inventory_to_transfer:
-            item = inv_item.as_dict()
-            item["location"] = new_location
-            reserved_inv.append(item)
-
-        dest_url = f'http://{dest_serv.ip_address}:{dest_serv.port}/inventory/update'
-        response = requests.request("PUT", dest_url, headers={}, json = reserved_inv)
-
-        print("Response received!")
-        if response.ok:
-            print("Updating inventory on Orchestrator")
-            # If the response status code is 200 (OK), parse the response as JSON
-            # json_data = response.json()
-            db_session.query(Inventory).filter(Inventory.id.in_(reserved_ids)).update({Inventory.location: dest_serv.id}, synchronize_session = False)
-            db_session.commit()
-    # Syncing servers
-    if dest_serv.partner_id is not None:
-        send_inventory(dest_serv.partner_id)
-    # db_session.close()
-    return response
+    intersection_result = collections.Counter(deactivated_ids_primary) & collections.Counter(deactivated_ids_partner)
+    deactivated_ids = list(intersection_result.elements())
+    
+    # Next, check if destination server has partner
+    send_and_activate(new_location, deactivated_ids)
+    return deactivated_ids
 
 @app.put("/reset")
 def reset():

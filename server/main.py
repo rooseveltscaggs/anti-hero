@@ -193,11 +193,16 @@ def forwarded_request(forwarded_request: ForwardedRequest):
     # If not in backup mode, mark data as dirty and respond with success
     in_backup = retrieve_registry("In_Backup")
     if not in_backup:
-        db_session.query(Inventory).filter(Inventory.id.in_(forwarded_request.inventory_ids),
-                                           Inventory.status_last_updated <= forwarded_request.request_time).update({Inventory.is_dirty: True, Inventory.status_last_updated: forwarded_request.request_time}, synchronize_session = False)
+        query = db_session.query(Inventory).filter(Inventory.id.in_(forwarded_request.inventory_ids),
+                                           Inventory.status_last_updated <= forwarded_request.request_time)
+        query.update({Inventory.is_dirty: True, Inventory.status_last_updated: forwarded_request.request_time}, synchronize_session = False)
         db_session.commit()
         db_session.close()
-        return {"Status": "Success", "Action": "Marked Dirty", "inventory_ids": forwarded_request.inventory_ids}
+        
+        dirty_ids = db_session.query(Inventory.id).filter(Inventory.is_dirty == True, Inventory.id.in_(forwarded_request.inventory_ids)).all()
+        dirty_ids = [record[0] for record in dirty_ids]
+        db_session.close()
+        return {"Status": "Success", "Action": "Marked Dirty", "inventory_ids": dirty_ids}
     # Otherwise, don't make any changes and respond with error
     else:
         bad_resp = {"Status": "Failed", "Reason": "Server In Backup Mode"}
