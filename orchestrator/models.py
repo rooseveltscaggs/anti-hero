@@ -66,7 +66,7 @@ class Inventory(Base):
 
    def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-      self_dict["status_last_updated"] = self.status_last_updated.isoformat()
+      self_dict["status_last_updated"] = None if not self.status_last_updated else self.status_last_updated.isoformat()
       return self_dict
 
 class WorkerTask(Base):
