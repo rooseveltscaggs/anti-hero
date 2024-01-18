@@ -193,7 +193,7 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
         # print(inventory_ids)
         print(f'Inititating transfer of array with length {len(inventory_ids)} with ids {inventory_ids[0]} ... {inventory_ids[len(inventory_ids)-1]}')
         background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
-    
+    db_session.close()
     return {"Status": "Queued"}
 
 @app.put("/failure")
@@ -207,11 +207,12 @@ def report_failure(failed_server_id: int, backup_server_id: int):
             failed_server.in_failure = True
             backup_server.in_backup = True
             db_session.commit()
+            db_session.close()
         else:
             print("Denying authority...")
             bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
+            db_session.close()
             return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
-    db_session.close()
     return {"Status": "Granted"}
 
 @app.put("/initiate-recovery")
@@ -230,6 +231,7 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
 
     if not failed_server.in_failure or not backup_server.in_backup:
         bad_resp = {"Status": "Denied", "Reason": "Conditions not met for recovery"}
+        db_session.close()
         return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
 
     backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server.id}'
@@ -262,6 +264,7 @@ def send_server_map(server_id):
     db_session.close()
 
 def send_inventory(server_id):
+    # ! Not paginated, will be a problem for big transfers
     inventory_list = []
     server = db_session.query(Server).filter(Server.id == server_id).first()
 
@@ -325,6 +328,7 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
                 # return array
                 deactivated_ids += deactivated_inventory
         curr_idx = (curr_idx+CHUNK_SIZE)
+    db_session.close()
     return deactivated_ids
 
 
@@ -379,6 +383,7 @@ def send_and_activate(destination_server, inventory_ids):
                 db_session.commit()
                 db_session.close()
         curr_idx = (curr_idx+CHUNK_SIZE)
+    db_session.close()
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
@@ -386,6 +391,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         # Check if current server has partner
         current_server = db_session.query(Server).filter(Server.id == current_location).first()
         curr_partner_id = current_server.partner_id
+        db_session.close()
 
         deactivated_ids_partner = inventory_ids
         print("Requesting deactivation of inventory...")
@@ -408,11 +414,11 @@ def transfer_inventory(inventory_ids, current_location, new_location):
     send_and_activate(new_location, deactivated_ids)
     return deactivated_ids
 
-def repair_partnership(relinquished_ids, failed_server_id, backup_server_id):
-    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
-    backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
+# def repair_partnership(relinquished_ids, failed_server_id, backup_server_id):
+#     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+#     backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
 
-    # First step is to attempt
+#     # First step is to attempt
 
 @app.put("/reset")
 def reset():
