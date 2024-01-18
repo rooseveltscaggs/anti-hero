@@ -197,14 +197,17 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
 
 @app.put("/failure")
 def report_failure(failed_server_id: int, backup_server_id: int):
+    print("Failure reported!")
     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
     backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
     if failed_server and backup_server:
         if not backup_server.in_failure and not failed_server.in_backup:
+            print("Granting authority...")
             failed_server.in_failure = True
             backup_server.in_backup = True
             db_session.commit()
         else:
+            print("Denying authority...")
             bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
             return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
     db_session.close()
