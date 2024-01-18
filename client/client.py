@@ -138,6 +138,9 @@ def transfer_inventory():
         else:
             # add single number to ids
             ids.append(int(entry))
+    print(ids[0:5])
+    print(ids[len(ids)-5:])
+    print(len(ids))
     print_servers()
     server_id = input("Choose a server to transfer inventory to: ")
 

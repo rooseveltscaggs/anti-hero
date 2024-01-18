@@ -181,8 +181,8 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
     for location in locations:
         inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location[0], Inventory.id.in_(ids)).all()
         inventory_ids = [record[0] for record in inventory_ids]
-        print("Inventory Transfer: ")
-        print(inventory_ids)
+        # print("Inventory Transfer: ")
+        # print(inventory_ids)
         background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
     
     return {"Status": "Queued"}
@@ -346,6 +346,7 @@ def send_and_activate(destination_server, inventory_ids):
             # upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
             backup_response = (upd_response.ok)
         # sending data chunk to primary
+        print(f'Sending chunk of length {len(chunk_data)}: with keys [{chunk[0]} ... {chunk[len(chunk)-1]}]')
         curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/update'
         upd_response = s_current.put(curr_url, json = chunk_data)
         # upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
