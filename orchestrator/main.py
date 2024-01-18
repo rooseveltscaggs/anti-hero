@@ -322,7 +322,7 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
                 # If not set to write to database, then just add deactivated ids to
                 # return array
                 deactivated_ids += deactivated_inventory
-        curr_idx += (curr_idx+CHUNK_SIZE)
+        curr_idx = (curr_idx+CHUNK_SIZE)
     return deactivated_ids
 
 
