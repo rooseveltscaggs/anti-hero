@@ -369,7 +369,11 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 
         intersection_result = collections.Counter(deactivated_ids_primary) & collections.Counter(deactivated_ids_partner)
         deactivated_ids = list(intersection_result.elements())
-    
+    else:
+        db_session.query(Inventory).filter(Inventory.location == current_location, 
+                                           Inventory.locked == False).update({Inventory.location: new_location}, synchronize_session=False)
+        db_session.commit()
+        db_session.close()
     # Next, check if destination server has partner
     send_and_activate(new_location, deactivated_ids)
     return deactivated_ids
