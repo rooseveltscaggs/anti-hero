@@ -404,7 +404,8 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 
         deactivated_ids = common_elements(deactivated_ids_partner, deactivated_ids_primary)
     else:
-        db_session.query(Inventory).filter(Inventory.location == current_location, 
+        db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids),
+                                           Inventory.location == current_location, 
                                            Inventory.locked == False).update({Inventory.location: new_location}, synchronize_session=False)
         db_session.commit()
         db_session.close()
