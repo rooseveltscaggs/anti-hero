@@ -336,8 +336,8 @@ async def activate_inventory(request: Request):
 
 @app.post("/inventory/buy/reserve")
 def buy_inventory(ids: List[int]):
-    status = retrieve_registry("Status")
-    if status == "Disabled":
+    status_reg = retrieve_registry("Status")
+    if status_reg == "Disabled":
         raise HTTPException(status_code=503, detail="Service unavailable")
     request_time = datetime.utcnow()
     transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
@@ -419,10 +419,7 @@ async def submit_payment_details(request: Request):
     if cc_no and transaction_id:
         db_session.query(Inventory).filter(Inventory.availability == "Reserved",
                                            Inventory.locked == True,
-                                           Inventory.transaction_id == transaction_id).update(
-                                               {Inventory.availability: "Purchased",
-                                                Inventory.locked: False}
-                                           )
+                                           Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased"})
         db_session.commit()
         db_session.close()
     else:
