@@ -59,7 +59,8 @@ def send_heartbeat():
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         status = retrieve_registry("Status")
-        if status != 'Disabled':
+        in_backup = retrieve_registry("In_Backup")
+        if status != 'Disabled' and not in_backup:
             partner_id = retrieve_registry("Partner_ID")
             if partner_id:
                 partner = db_session.query(Server).filter(Server.id == partner_id).first()
@@ -116,8 +117,34 @@ def update_authority():
     return True
 
 def attempt_recovery(relinquished_ids):
-    # 
-    pass
+    print("Requesting Orchestrator to initiate recovery...")
+    # Send initiate recovery request
+    server_id = retrieve_registry("Server_ID")
+    # partner_id = retrieve_registry("Partner_ID")
+    orc_ip = retrieve_registry("Orchestrator_IP")
+    orc_port = retrieve_registry("Orchestrator_Port")
+
+    curr_url = f'http://{orc_ip}:{orc_port}/initiate-recovery'
+    request_body = {}
+    request_body["relinquished_ids"] = relinquished_ids
+    request_body["server_id"] = server_id
+    
+    while True:
+        try:
+            response = requests.request("PUT", curr_url, json=request_body)
+            break
+        except requests.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+        except requests.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+        except requests.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+        except requests.exceptions.RequestException as err:
+            print ("Oops: Something Else",err)
+    
+    if response.ok:
+        print("Recovery process approved by Orchestrator...returning to normal operation")
+    return
 
 def relinquish_inventory():
     server_id = retrieve_registry("Server_ID")
