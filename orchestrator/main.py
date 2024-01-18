@@ -18,6 +18,13 @@ models.Base.metadata.create_all(bind=engine)
 
 TRANSACT_ID_LENGTH = 10
 
+def common_elements(list1, list2):
+    set1 = set(list1)
+    set2 = set(list2)
+    common_set = set1.intersection(set2)
+    common_list = list(common_set)
+    return common_list
+
 def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choice(characters) for _ in range(length))
@@ -386,8 +393,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         # Then send (writing) deactivation request to main node
         deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
 
-        intersection_result = collections.Counter(deactivated_ids_primary) & collections.Counter(deactivated_ids_partner)
-        deactivated_ids = list(intersection_result.elements())
+        deactivated_ids = common_elements(deactivated_ids_partner, deactivated_ids_primary)
     else:
         db_session.query(Inventory).filter(Inventory.location == current_location, 
                                            Inventory.locked == False).update({Inventory.location: new_location}, synchronize_session=False)
