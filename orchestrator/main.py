@@ -326,7 +326,8 @@ def send_and_activate(destination_server, inventory_ids):
     BACK_SERV_IP = backup_serv.ip_address
     BACK_SERV_PORT = backup_serv.port
 
-    s = requests.Session()
+    s_current = requests.Session()
+    s_backup = requests.Session()
     curr_idx = 0
     # Setting inventory to new worker node location
     db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server}, synchronize_session=False)
@@ -341,19 +342,23 @@ def send_and_activate(destination_server, inventory_ids):
         # if partner, send data chunk to backup (partner)
         if backup_serv:
             back_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/update'
-            upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
+            upd_response = s_backup.put(back_url, json = chunk_data)
+            # upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
             backup_response = (upd_response.ok)
         # sending data chunk to primary
         curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/update'
-        upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
+        upd_response = s_current.put(curr_url, json = chunk_data)
+        # upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
         
         # If unactivated data successfully received by primary (& backup if applicable), send activate command
         if backup_response:
             curr_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/activate'
-            active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
+            active_resp = s_current.put(curr_url, json = chunk)
+            # active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
         if upd_response.ok:
             curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/activate'
-            active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
+            active_resp = s_current.put(curr_url, json = chunk)
+            # active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
             # If activate command received, update DB to reflect activation status
             if active_resp.ok:
                 chunk_query.update({Inventory.activated: True}, synchronize_session=False)
