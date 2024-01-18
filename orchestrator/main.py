@@ -374,6 +374,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
                                            Inventory.locked == False).update({Inventory.location: new_location}, synchronize_session=False)
         db_session.commit()
         db_session.close()
+        deactivated_ids = inventory_ids
     # Next, check if destination server has partner
     send_and_activate(new_location, deactivated_ids)
     return deactivated_ids
