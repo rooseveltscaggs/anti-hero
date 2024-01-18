@@ -185,7 +185,7 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
         print("-- Inventory Transfer -- ")
         # print(inventory_ids)
         print(f'Inititating transfer of array with length {len(inventory_ids)} with ids {inventory_ids[0]} ... {inventory_ids[len(inventory_ids)-1]}')
-        background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
+        background_tasks.add_task(transfer_inventory, ids, location[0], destination)
     
     return {"Status": "Queued"}
 
