@@ -201,6 +201,8 @@ def report_failure(failed_server_id: int, backup_server_id: int):
     print("Failure reported!")
     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
     backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
+    db_session.refresh(failed_server)
+    db_session.refresh(backup_server)
     if failed_server and backup_server:
         if not backup_server.in_failure and not failed_server.in_backup:
             print("Granting authority...")
@@ -226,6 +228,9 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
     backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
     
+    db_session.refresh(failed_server)
+    db_session.refresh(backup_server)
+
     failed_server_id = failed_server.id
     backup_server_id = backup_server.id
 
