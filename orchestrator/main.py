@@ -212,6 +212,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
 
 @app.put("/initiate-recovery")
 async def initiate_recovery(request: Request, background_tasks: BackgroundTasks):
+    print("Recovery request received...")
     json_data = await request.json()
     
     relinquished_ids = json_data["relinquished_ids"]
@@ -385,6 +386,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         curr_partner_id = current_server.partner_id
 
         deactivated_ids_partner = inventory_ids
+        print("Requesting deactivation of inventory...")
         # If partner, send (non-writing) deactivation request to partner
         if curr_partner_id:
             deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
@@ -400,6 +402,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         db_session.close()
         deactivated_ids = inventory_ids
     # Next, check if destination server has partner
+    print("Sending and activating inventory...")
     send_and_activate(new_location, deactivated_ids)
     return deactivated_ids
 
