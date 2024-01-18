@@ -9,7 +9,6 @@ import models
 import requests
 import time
 import string
-import collections
 import random
 from models import Server, Inventory, Reservation, RegistryEntry
 
