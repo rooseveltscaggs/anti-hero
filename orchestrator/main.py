@@ -359,6 +359,7 @@ def send_and_activate(destination_server, inventory_ids):
                 db_session.commit()
                 db_session.close()
         curr_idx += (curr_idx+CHUNK_SIZE)
+        time.sleep(5)
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
