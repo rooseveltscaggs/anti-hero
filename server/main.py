@@ -278,11 +278,11 @@ def deactivate_inventory(ids: List[int], send_data: bool = False):
     # ! I think last_modified_by should be removed in this instance... only should be used by the Buy function
     if send_data:
         deactivated_inventory = db_session.query(Inventory).filter(Inventory.location == 0,
-                                       Inventory.ids.in_(ids)).all()
+                                       Inventory.id.in_(ids)).all()
     else:
         # Send only the IDs (will this be too big?)
         deactivated_inventory = db_session.query(Inventory.id).filter(Inventory.location == 0,
-                                       Inventory.ids.in_(ids)).all()
+                                       Inventory.id.in_(ids)).all()
         deactivated_inventory = [record[0] for record in deactivated_inventory]
         
     # else:
