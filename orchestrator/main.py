@@ -336,6 +336,7 @@ def send_and_activate(destination_server, inventory_ids):
         chunk = inventory_ids[curr_idx:curr_idx+CHUNK_SIZE]
         chunk_query = db_session.query(Inventory).filter(Inventory.id.in_(chunk), Inventory.location == destination_server)
         chunk_data = chunk_query.all()
+        chunk_data = [object.as_dict() for object in chunk_data]
         # if partner, send data chunk to backup (partner)
         if backup_serv:
             back_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/update'
