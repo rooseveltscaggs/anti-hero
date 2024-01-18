@@ -240,9 +240,7 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
             failed_server.in_failure = False
             backup_server.in_backup = False
             db_session.commit()
-
-    
-    db_session.close()
+            db_session.close()
     # The deactivation step of transfer_inventory might be redundant for this case
     # as the failed partner has assumedly already deactivated all of its inventory
     background_tasks.add_task(transfer_inventory, relinquished_ids, backup_server_id, failed_server_id)
