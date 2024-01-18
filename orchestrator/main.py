@@ -205,7 +205,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
     return {"Status": "Granted"}
 
 @app.put("/initiate-recovery")
-async def initiate_recovery(failed_server_id: int, request: Request, background_tasks: BackgroundTasks):
+async def initiate_recovery(request: Request, background_tasks: BackgroundTasks):
     json_data = await request.json()
     
     relinquished_ids = json_data["relinquished_ids"]
