@@ -287,11 +287,13 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
     deactivated_ids = []
     CHUNK_SIZE = 1000
     curr_serv = db_session.query(Server).filter(Server.id == server_id).first()
+    CURR_SERV_IP = curr_serv.ip_address
+    CURR_SERV_PORT = curr_serv.port
     curr_idx = 0
     while curr_idx < len(inventory_ids):
         chunk = inventory_ids[curr_idx:curr_idx+CHUNK_SIZE]
         # sending chunk
-        curr_url = f'http://{curr_serv.ip_address}:{curr_serv.port}/inventory/deactivate{"?send_data=True" if write_to_database else ""}'
+        curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/deactivate{"?send_data=True" if write_to_database else ""}'
         response = requests.request("PUT", curr_url, headers={}, json = chunk)
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
