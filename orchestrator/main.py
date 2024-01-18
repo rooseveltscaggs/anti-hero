@@ -367,7 +367,7 @@ def send_and_activate(destination_server, inventory_ids):
                 chunk_query.update({Inventory.activated: True}, synchronize_session=False)
                 db_session.commit()
                 db_session.close()
-        curr_idx += (curr_idx+CHUNK_SIZE)
+        curr_idx = (curr_idx+CHUNK_SIZE)
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
