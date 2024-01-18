@@ -94,6 +94,7 @@ def main_menu():
     print("9) View/Search Inventory")
     print("10) Send Automated Requests (Simple)")
     print("11) Simple Experiment Configurator")
+    print("12) Test Inventory")
     print("RESET) Reset All Servers")
     print("\n")
     return input("Enter the number of an option above: ")
@@ -230,6 +231,41 @@ def disable_server():
 
 def view_search_inventory():
     global INVENTORY_MAP
+    download_inventory_map()
+    print('\n-- Inventory Preview --')
+    preview_max = max(0, len(INVENTORY_MAP))
+    preview_min = min(preview_max, 5)
+    # Print the first 5 key-value pairs
+    for _, seat in list(INVENTORY_MAP.items())[:preview_min]:
+        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
+        print(inv_summary)
+    while True:
+        seat_id = input("Enter an inventory id for details or type q to quit: ")
+        if seat_id == "q":
+            break
+        download_inventory_map(seat_id)
+        seat = INVENTORY_MAP[int(seat_id)]
+        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
+        print(inv_summary)
+
+def test_inventory():
+    global SERVER_MAP
+    print_servers()
+    server_id = int(input("Choose the server to test: "))
+    inv_id = input("Enter an inventory id to test: ")
+
+    server = SERVER_MAP[server_id]
+    servers_url = f'{server["hostname"]}:{server["port"]}/inventory/{inv_id}'
+    server_resp = requests.get(servers_url)
+    if server_resp.ok:
+        # If the response status code is 200 (OK), parse the response as JSON
+        print("--- Request Successful ---")
+        json_obj = server_resp.json()
+        print(json_obj)
+    else:
+        print("--- Request Failure ---")
+        print(server_resp)
+    return
     download_inventory_map()
     print('\n-- Inventory Preview --')
     preview_max = max(0, len(INVENTORY_MAP))
@@ -625,6 +661,9 @@ if __name__ == "__main__":
 
             case "11":
                 simple_experiment_configurator()
+            
+            case "12":
+                test_inventory()
             
             case "RESET":
                 reset_all_servers()
