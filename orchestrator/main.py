@@ -326,6 +326,7 @@ def send_and_activate(destination_server, inventory_ids):
     BACK_SERV_IP = backup_serv.ip_address
     BACK_SERV_PORT = backup_serv.port
 
+    s = requests.Session()
     curr_idx = 0
     # Setting inventory to new worker node location
     db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server}, synchronize_session=False)
@@ -359,7 +360,6 @@ def send_and_activate(destination_server, inventory_ids):
                 db_session.commit()
                 db_session.close()
         curr_idx += (curr_idx+CHUNK_SIZE)
-        time.sleep(5)
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
