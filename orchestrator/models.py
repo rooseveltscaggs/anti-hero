@@ -65,7 +65,9 @@ class Inventory(Base):
    last_modified_by = Column(String(), nullable=True)
 
    def as_dict(self):
-      return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+      self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+      self_dict["status_last_updated"] = self.status_last_updated.isoformat()
+      return self_dict
 
 class WorkerTask(Base):
     __tablename__ = 'worker_tasks'

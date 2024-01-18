@@ -275,7 +275,6 @@ def test_inventory():
 def buy_inventory():
     global SERVER_MAP
     global INVENTORY_MAP
-    print_servers()
     print("* Inventory Purchased must be located in same server pod *")
     inv_range_string = input("Enter an inventory range to buy: ")
     inv_range = range_to_list(inv_range_string)
@@ -330,7 +329,7 @@ def buy_inventory():
         reserved_ids = json_obj["reserved_ids"]
         # If the response status code is 200 (OK), parse the response as JSON
         print(f'Transaction ID: {transaction_id} -- {len(reserved_ids)} ids reserved')
-        print("Reserve Request Successful.. sending payment details")
+        input("Reserve Request Successful... press ENTER to send payment details")
 
         payment_url = f'http://{successful_server["ip_address"]}:{successful_server["port"]}/inventory/buy/payment'
         
@@ -342,7 +341,8 @@ def buy_inventory():
         while True:
             try:
                 response = requests.request("POST", payment_url, json=payment_details, timeout=3)
-                break
+                if response.ok:
+                    break
             except requests.exceptions.HTTPError as errh:
                 print ("Http Error:",errh)
             except requests.exceptions.ConnectionError as errc:
@@ -351,7 +351,8 @@ def buy_inventory():
                 print ("Timeout Error:",errt)
             except requests.exceptions.RequestException as err:
                 print ("Oops: Something Else",err)
-
+            input("Payment Processing Failed: Press ENTER to try again")
+        print("Purchase Completed!")
         print(response.json())
 
 
