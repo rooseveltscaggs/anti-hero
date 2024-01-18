@@ -298,8 +298,9 @@ def buy_inventory():
     while True:
         try:
             response = requests.request("POST", primary_url, json=inv_range, timeout=3)
-            successful_server = primary_server
-            break
+            if response.ok:
+                successful_server = primary_server
+                break
         except requests.exceptions.HTTPError as errh:
             print ("Http Error:",errh)
         except requests.exceptions.ConnectionError as errc:
@@ -311,8 +312,9 @@ def buy_inventory():
 
         try:
             response = requests.request("POST", backup_url, json=inv_range, timeout=3)
-            successful_server = backup_server
-            break
+            if response.ok:
+                successful_server = backup_server
+                break
         except requests.exceptions.HTTPError as errh:
             print ("Http Error:",errh)
         except requests.exceptions.ConnectionError as errc:
