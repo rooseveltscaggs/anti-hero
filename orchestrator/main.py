@@ -353,7 +353,7 @@ def send_and_activate(destination_server, inventory_ids):
         # If unactivated data successfully received by primary (& backup if applicable), send activate command
         if backup_response:
             curr_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/activate'
-            active_resp = s_current.put(curr_url, json = chunk)
+            active_resp = s_backup.put(curr_url, json = chunk)
             # active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
         if upd_response.ok:
             curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/activate'
