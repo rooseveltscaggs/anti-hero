@@ -177,13 +177,14 @@ def initiate_transfer(ids: List[int], destination: int, background_tasks: Backgr
     # Event.resource_id == row.id) & (Event.weekday.contains(weekdayAbbrev[i])) & (Event.recurrence_type.in_(['Weekly', 'Monthly'])
     # session.query(Table.column, 
 #    func.count(Table.column)).group_by(Table.column).all()
+    print(f'Received transfer request array of length {len(ids)} with ids {ids[0]} ... {ids[len(ids)-1]}')
     locations = db_session.query(Inventory.location).filter(Inventory.id.in_(ids)).group_by(Inventory.location).all()
     for location in locations:
         inventory_ids = db_session.query(Inventory.id).filter(Inventory.location == location[0], Inventory.id.in_(ids)).all()
         inventory_ids = [record[0] for record in inventory_ids]
         print("-- Inventory Transfer -- ")
         # print(inventory_ids)
-        print(f'Inititating transfer of array length {len(inventory_ids)} with ids {inventory_ids[0]} ... {inventory_ids[len(inventory_ids)-1]}')
+        print(f'Inititating transfer of array with length {len(inventory_ids)} with ids {inventory_ids[0]} ... {inventory_ids[len(inventory_ids)-1]}')
         background_tasks.add_task(transfer_inventory, inventory_ids, location[0], destination)
     
     return {"Status": "Queued"}
