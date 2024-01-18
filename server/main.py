@@ -203,7 +203,7 @@ def forwarded_request(forwarded_request: ForwardedRequest):
         raise HTTPException(status_code=503, detail="Service unavailable")
     if not in_backup:
         query = db_session.query(Inventory).filter(Inventory.id.in_(forwarded_request.inventory_ids),
-                                           (Inventory.status_last_updated <= forwarded_request.request_time | Inventory.status_last_updated == None),
+                                           ((Inventory.status_last_updated <= forwarded_request.request_time) | (Inventory.status_last_updated == None)),
                                            Inventory.activated == True)
         query.update({Inventory.is_dirty: True, Inventory.status_last_updated: forwarded_request.request_time}, synchronize_session = False)
         db_session.commit()
