@@ -152,14 +152,21 @@ def relinquish_inventory():
     server_id = retrieve_registry("Server_ID")
     query = db_session.query(Inventory).filter(Inventory.locked == False,
                                        Inventory.location == server_id)
+    prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.locked == False,
+                                                      Inventory.location == 0,
+                                                      Inventory.on_backup == True).all()
     # Get IDs of unlocked inventory (this will be requested later)
     relinquished_ids = query.all()
     relinquished_ids = [record.id for record in relinquished_ids]
 
-    # Move all unlocked inventory to 
-    query.update({ Inventory.location: 0, Inventory.activated: False })
+    prev_relinquished_ids = [record.id for record in prev_relinquished_ids]
+
+
+    # Move all unlocked inventory to Orchestrator with a special backup marker
+    # to denote relinquished inventory
+    query.update({ Inventory.location: 0, Inventory.activated: False, Inventory.on_backup: True })
     db_session.commit()
-    return relinquished_ids
+    return relinquished_ids + prev_relinquished_ids
 
 def failure_detection():
     print("Background failure detection is running...")

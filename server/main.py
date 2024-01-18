@@ -406,7 +406,7 @@ def buy_inventory(ids: List[int]):
     
     db_session.commit()
     db_session.close()
-    return {"Status": "Success: Awaiting Payment Details", "Transaction_ID": transaction_id, "reserved_ids": reserved_ids}
+    return {"Status": "Success: Awaiting Payment Details", "transaction_id": transaction_id, "reserved_ids": reserved_ids}
 
 @app.post("/inventory/buy/payment")
 async def submit_payment_details(request: Request):

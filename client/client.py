@@ -95,6 +95,7 @@ def main_menu():
     print("10) Send Automated Requests (Simple)")
     print("11) Simple Experiment Configurator")
     print("12) Test Inventory")
+    print("13) Buy Inventory")
     print("RESET) Reset All Servers")
     print("\n")
     return input("Enter the number of an option above: ")
@@ -269,22 +270,95 @@ def test_inventory():
         print("--- Request Failure ---")
         print(server_resp)
     return
-    download_inventory_map()
-    print('\n-- Inventory Preview --')
-    preview_max = max(0, len(INVENTORY_MAP))
-    preview_min = min(preview_max, 5)
-    # Print the first 5 key-value pairs
-    for _, seat in list(INVENTORY_MAP.items())[:preview_min]:
-        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
-        print(inv_summary)
+
+
+def buy_inventory():
+    global SERVER_MAP
+    global INVENTORY_MAP
+    print_servers()
+    print("* Inventory Purchased must be located in same server pod *")
+    inv_range_string = input("Enter an inventory range to buy: ")
+    inv_range = range_to_list(inv_range_string)
+    # server_id = int(input("Choose the server to test: "))
+
+    # Check first ID to see where it is located
+    inventory = INVENTORY_MAP[int(inv_range[0])]
+    primary_server = SERVER_MAP[int(inventory["location"])]
+    backup_server = SERVER_MAP[int(inventory["location"])]
+    if primary_server["partner_id"]:
+        backup_server = SERVER_MAP[int(primary_server["partner_id"])]
+    
+    primary_url = f'http://{primary_server["ip_address"]}:{primary_server["port"]}/inventory/buy/reserve'
+    backup_url = f'http://{backup_server["ip_address"]}:{backup_server["port"]}/inventory/buy/reserve'
+    
+    # server_resp = requests.get(servers_url)
+    # curr_url = f'http://{partner.ip_address}:{partner.port}/inventory/forward'
+
+    successful_server = None
+
     while True:
-        seat_id = input("Enter an inventory id for details or type q to quit: ")
-        if seat_id == "q":
+        try:
+            response = requests.request("POST", primary_url, json=inv_range, timeout=3)
+            successful_server = primary_server
             break
-        download_inventory_map(seat_id)
-        seat = INVENTORY_MAP[int(seat_id)]
-        inv_summary = f'Seat ID {seat["id"]}) Section {seat["section"]} Row {seat["row"]} Seat {seat["seat"]} - Location: {seat["location"]} - Status: {seat["availability"]}'
-        print(inv_summary)
+        except requests.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+        except requests.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+        except requests.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+        except requests.exceptions.RequestException as err:
+            print ("Oops: Something Else",err)
+
+        try:
+            response = requests.request("POST", backup_url, json=inv_range, timeout=3)
+            successful_server = backup_server
+            break
+        except requests.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+        except requests.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+        except requests.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+        except requests.exceptions.RequestException as err:
+            print ("Oops: Something Else",err)
+
+        
+    if response.ok:
+        json_obj = response.json()
+        transaction_id = json_obj["transaction_id"]
+        reserved_ids = json_obj["reserved_ids"]
+        # If the response status code is 200 (OK), parse the response as JSON
+        print(f'Transaction ID: {transaction_id} -- {len(reserved_ids)} ids reserved')
+        print("Reserve Request Successful.. sending payment details")
+
+        payment_url = f'http://{successful_server["ip_address"]}:{successful_server["port"]}/inventory/buy/payment'
+        
+        payment_details = {
+            "credit_card_number": ''.join([str(random.randint(0, 9)) for _ in range(16)]),
+            "transaction_id": transaction_id,
+        }
+
+        while True:
+            try:
+                response = requests.request("POST", payment_url, json=payment_details, timeout=3)
+                break
+            except requests.exceptions.HTTPError as errh:
+                print ("Http Error:",errh)
+            except requests.exceptions.ConnectionError as errc:
+                print ("Error Connecting:",errc)
+            except requests.exceptions.Timeout as errt:
+                print ("Timeout Error:",errt)
+            except requests.exceptions.RequestException as err:
+                print ("Oops: Something Else",err)
+
+        print(response.json())
+
+
+    else:
+        print("--- Request Failure ---")
+        print(response)
+    return
 
 def simple_experiment_configurator():
     config_string = ""
@@ -667,6 +741,9 @@ if __name__ == "__main__":
             
             case "12":
                 test_inventory()
+
+            case "13":
+                buy_inventory()
             
             case "RESET":
                 reset_all_servers()
