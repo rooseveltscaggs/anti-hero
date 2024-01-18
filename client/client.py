@@ -255,7 +255,7 @@ def test_inventory():
     inv_id = input("Enter an inventory id to test: ")
 
     server = SERVER_MAP[server_id]
-    servers_url = f'{server["hostname"]}:{server["port"]}/inventory/{inv_id}'
+    servers_url = f'http://{server["ip_address"]}:{server["port"]}/inventory/{inv_id}'
     server_resp = requests.get(servers_url)
     if server_resp.ok:
         # If the response status code is 200 (OK), parse the response as JSON
@@ -599,7 +599,7 @@ def reset_all_servers():
     download_server_map()
     print("Sending inventory reset command to all servers...")
     for server in SERVER_MAP.values():
-        server_url = f'http://{server["hostname"]}:{server["port"]}/reset'
+        server_url = f'http://{server["ip_address"]}:{server["port"]}/reset'
         requests.request("PUT", server_url)
     
     orc_reset_url = f'http://{ORC_IP}:{ORC_PORT}/reset'

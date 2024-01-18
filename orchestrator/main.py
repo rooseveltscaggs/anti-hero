@@ -354,20 +354,21 @@ def send_and_activate(destination_server, inventory_ids):
     return
 
 def transfer_inventory(inventory_ids, current_location, new_location):
-    # Check if current server has partner
-    current_server = db_session.query(Server).filter(Server.id == current_location).first()
-    curr_partner_id = current_server.partner_id
+    if current_location != 0:
+        # Check if current server has partner
+        current_server = db_session.query(Server).filter(Server.id == current_location).first()
+        curr_partner_id = current_server.partner_id
 
-    deactivated_ids_partner = inventory_ids
-    # If partner, send (non-writing) deactivation request to partner
-    if curr_partner_id:
-        deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
-    
-    # Then send (writing) deactivation request to main node
-    deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
+        deactivated_ids_partner = inventory_ids
+        # If partner, send (non-writing) deactivation request to partner
+        if curr_partner_id:
+            deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
+        
+        # Then send (writing) deactivation request to main node
+        deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
 
-    intersection_result = collections.Counter(deactivated_ids_primary) & collections.Counter(deactivated_ids_partner)
-    deactivated_ids = list(intersection_result.elements())
+        intersection_result = collections.Counter(deactivated_ids_primary) & collections.Counter(deactivated_ids_partner)
+        deactivated_ids = list(intersection_result.elements())
     
     # Next, check if destination server has partner
     send_and_activate(new_location, deactivated_ids)
