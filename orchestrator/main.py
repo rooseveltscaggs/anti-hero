@@ -202,6 +202,40 @@ def report_failure(failed_server_id: int, backup_server_id: int):
     db_session.close()
     return {"Status": "Granted"}
 
+@app.put("/initiate-recovery")
+async def initiate_recovery(failed_server_id: int, request: Request, background_tasks: BackgroundTasks):
+    json_data = await request.json()
+    
+    relinquished_ids = json_data["relinquished_ids"]
+    failed_server_id = json_data["server_id"]
+
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
+    
+    failed_server_id = failed_server.id
+    backup_server_id = backup_server.id
+
+    if not failed_server.in_failure or not backup_server.in_backup:
+        bad_resp = {"Status": "Denied", "Reason": "Conditions not met for recovery"}
+        return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
+
+    backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server.id}'
+    backup_server_resp = requests.request("PUT", backup_server_url)
+    if backup_server_resp.ok:
+        failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server.id}'
+        failed_server_resp = requests.request("PUT", failed_server_url)
+        if failed_server_resp.ok:
+            failed_server.in_failure = False
+            backup_server.in_backup = False
+            db_session.commit()
+
+    
+    db_session.close()
+    # The deactivation step of transfer_inventory might be redundant for this case
+    # as the failed partner has assumedly already deactivated all of its inventory
+    background_tasks.add_task(transfer_inventory, relinquished_ids, backup_server_id, failed_server_id)
+    return {"Status": "Queued: Begin Operating"}
+
 def send_server_map(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
     servers = db_session.query(Server).all()
@@ -338,6 +372,12 @@ def transfer_inventory(inventory_ids, current_location, new_location):
     # Next, check if destination server has partner
     send_and_activate(new_location, deactivated_ids)
     return deactivated_ids
+
+def repair_partnership(relinquished_ids, failed_server_id, backup_server_id):
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
+
+    # First step is to attempt
 
 @app.put("/reset")
 def reset():

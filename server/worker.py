@@ -110,14 +110,27 @@ def request_authority():
 def update_authority():
     partner_id = retrieve_registry("Partner_ID")
     server_id = retrieve_registry("Server_ID")
-    db_session.query(Inventory).filter(Inventory.location == partner_id).update({Inventory.location: server_id, Inventory.on_backup: True}, synchronize_session = False)
+    db_session.query(Inventory).filter(Inventory.location == partner_id, Inventory.is_dirty == False).update({Inventory.location: server_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
     return True
 
-def attempt_recovery():
+def attempt_recovery(relinquished_ids):
     # 
     pass
+
+def relinquish_inventory():
+    server_id = retrieve_registry("Server_ID")
+    query = db_session.query(Inventory).filter(Inventory.locked == False,
+                                       Inventory.location == server_id)
+    # Get IDs of unlocked inventory (this will be requested later)
+    relinquished_ids = query.all()
+    relinquished_ids = [record.id for record in relinquished_ids]
+
+    # Move all unlocked inventory to 
+    query.update({ Inventory.location: 0, Inventory.activated: False })
+    db_session.commit()
+    return relinquished_ids
 
 def failure_detection():
     print("Background failure detection is running...")
@@ -141,7 +154,8 @@ def failure_detection():
                     else:
                         print("Authority denied... attempting recovery")
                         store_registry("Status", "Disabled")
-                        attempt_recovery()
+                        relinquished_ids = relinquish_inventory()
+                        attempt_recovery(relinquished_ids)
             db_session.close()
         else:
             print("No Timeout: No partner found...")

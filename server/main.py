@@ -157,6 +157,10 @@ def server_enable():
 def pair_servers(partner_id: int):
     update_server_map()
     store_registry("Partner_ID", partner_id)
+    store_registry("Last_Heartbeat", None)
+    store_registry("Status", "Available")
+    store_registry("In_Backup", False)
+
     partner = db_session.query(Server).filter(Server.id == partner_id).first()
     return partner
 
@@ -192,13 +196,17 @@ def register_with_orchestrator(port: Optional[str] = "80"):
 def forwarded_request(forwarded_request: ForwardedRequest):
     # If not in backup mode, mark data as dirty and respond with success
     in_backup = retrieve_registry("In_Backup")
+    status = retrieve_registry("Status")
+    if status == "Disabled":
+        raise HTTPException(status_code=503, detail="Service unavailable")
     if not in_backup:
         query = db_session.query(Inventory).filter(Inventory.id.in_(forwarded_request.inventory_ids),
-                                           Inventory.status_last_updated <= forwarded_request.request_time)
+                                           Inventory.status_last_updated <= forwarded_request.request_time,
+                                           Inventory.activated == True)
         query.update({Inventory.is_dirty: True, Inventory.status_last_updated: forwarded_request.request_time}, synchronize_session = False)
         db_session.commit()
         db_session.close()
-        
+
         dirty_ids = db_session.query(Inventory.id).filter(Inventory.is_dirty == True, Inventory.id.in_(forwarded_request.inventory_ids)).all()
         dirty_ids = [record[0] for record in dirty_ids]
         db_session.close()
@@ -222,7 +230,7 @@ async def update_all_inventory(request: Request):
     db_session.commit() 
     db_session.close()
     print("Inventory updated/created!")
-    return {"Status": "Activated"} 
+    return {"Status": "Updated"} 
 
 @app.get("/orchestrator/inventory")
 def retrieve_orchestrator_inventory():
@@ -324,39 +332,23 @@ async def activate_inventory(request: Request):
     # db_session.commit()
     # db_session.close()
 
-@app.post("/inventory/buy")
+@app.post("/inventory/buy/reserve")
 def buy_inventory(ids: List[int]):
+    status = retrieve_registry("Status")
+    if status == "Disabled":
+        raise HTTPException(status_code=503, detail="Service unavailable")
     request_time = datetime.utcnow()
     transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
     reserved_ids = []
     server_id = retrieve_registry("Server_ID", -1)
     partner_id = retrieve_registry("Partner_ID", 0)
     in_backup = retrieve_registry("In_Backup", False)
+    dirty_ids = ids
     # If stored on Orchestrator
     # Create reservation on Orchestrator
 
-    # New Reservation System (near instantaneous)
-    # ! Make sure to update availability status to Reserved and Transaction ID to the generated ID
-    # query = update(Inventory).filter(Inventory.id == 2, Inventory.availability == "Available").values({"availability": "Reserved for 2"})
-    # db_session.execute(query)
-    # db_session.commit()
-
-    # OR: db_session.query(Inventory).filter(Inventory.id == 2, Inventory.availability == "Available").update({ Inventory.availability: "Reserved for 1" }, synchronize_session=False)
-    db_session.query(Inventory).filter(Inventory.id.in_(ids), 
-                                       Inventory.availability == "Available",
-                                       Inventory.location == server_id,
-                                       Inventory.is_dirty == False).update({ Inventory.availability: "Reserved", Inventory.transaction_id: transaction_id}
-                                                                                     , synchronize_session=False)
-    db_session.commit()
-    db_session.close()
-
-    successful_ids_obj = db_session.query(Inventory.id).filter(Inventory.transaction_id == transaction_id, Inventory.availability == "Reserved").all()
-    successful_ids = [i[0] for i in successful_ids_obj]
-
-    # Might need some type of pausing feature to allow cleanup/synchronization
-    # Might want to re-design client/add new experiment where initial transaction ID is return immediately
-    # Client then opens new request where they check on the status of their transaction for (10 seconds max)... once they get a successful message back, record request as successful
-    if not in_backup:
+    # Forward Request to Partner (if applicable)
+    if not in_backup and partner_id:
         # Send forwarded request to partner, if successful commit otherwise rollback
         # Idea: Could send partner transaction ID and it could log that along with the dirty flag
         # In the end, 
@@ -368,7 +360,7 @@ def buy_inventory(ids: List[int]):
         request_body = {
             "request_time": datetime.utcnow().isoformat(),
             "transaction_id": transaction_id,
-            "inventory_ids": reserved_ids
+            "inventory_ids": ids
         }
         response = requests.request("PUT", curr_url, headers={}, json = request_body, timeout=3)
         if not response.ok:
@@ -376,10 +368,65 @@ def buy_inventory(ids: List[int]):
             # if json_data['Status'] != 'Success':
             db_session.rollback()
             bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to reach agreement with partner"}
-            return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=bad_resp)
+            return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
+        else:
+            json_data = response.json()
+            dirty_ids = json_data["inventory_ids"]
+
+
+
+    # New Reservation System (near instantaneous)
+    # ! Make sure to update availability status to Reserved and Transaction ID to the generated ID
+    # query = update(Inventory).filter(Inventory.id == 2, Inventory.availability == "Available").values({"availability": "Reserved for 2"})
+    # db_session.execute(query)
+    # db_session.commit()
+
+    # OR: db_session.query(Inventory).filter(Inventory.id == 2, Inventory.availability == "Available").update({ Inventory.availability: "Reserved for 1" }, synchronize_session=False)
+    db_session.query(Inventory).filter(Inventory.id.in_(dirty_ids), 
+                                       Inventory.availability == "Available",
+                                       Inventory.location == server_id,
+                                       Inventory.activated == True,
+                                       Inventory.locked == False).update({ Inventory.availability: "Reserved", 
+                                                                          Inventory.transaction_id: transaction_id,
+                                                                          Inventory.locked: True}
+                                                                                     , synchronize_session=False)
     db_session.commit()
     db_session.close()
-    return {"Status": "Success", "Transaction_ID": transaction_id, "Inventory": reserved_ids}
+
+    successful_ids_obj = db_session.query(Inventory.id).filter(Inventory.transaction_id == transaction_id, 
+                                                               Inventory.availability == "Reserved",
+                                                               Inventory.locked == True).all()
+    reserved_ids = [i[0] for i in successful_ids_obj]
+
+    # Might need some type of pausing feature to allow cleanup/synchronization
+    # Might want to re-design client/add new experiment where initial transaction ID is return immediately
+    # Client then opens new request where they check on the status of their transaction for (10 seconds max)... once they get a successful message back, record request as successful
+    
+    db_session.commit()
+    db_session.close()
+    return {"Status": "Success: Awaiting Payment Details", "Transaction_ID": transaction_id, "reserved_ids": reserved_ids}
+
+@app.post("/inventory/buy/payment")
+async def submit_payment_details(request: Request):
+    status = retrieve_registry("Status")
+    if status == "Disabled":
+        raise HTTPException(status_code=503, detail="Service unavailable")
+    json_data = await request.json()
+    transaction_id = json_data["transaction_id"]
+    cc_no = json_data["credit_card_number"]
+    if cc_no and transaction_id:
+        db_session.query(Inventory).filter(Inventory.availability == "Reserved",
+                                           Inventory.locked == True,
+                                           Inventory.transaction_id == transaction_id).update(
+                                               {Inventory.availability: "Purchased",
+                                                Inventory.locked: False}
+                                           )
+        db_session.commit()
+        db_session.close()
+    else:
+        raise HTTPException(status_code=400, detail="Missing payment details or transaction ID")
+    purchased_tickets = db_session.query(Inventory).filter(Inventory.transaction_id == transaction_id).all()
+    return purchased_tickets
 
 @app.get("/servers")
 def get_servers():
@@ -424,7 +471,9 @@ def get_item_status(item_id: int):
     status = retrieve_registry("Status")
     if status == 'Disabled':
         raise HTTPException(status_code=503, detail="Service unavailable")
-    inventory = db_session.query(Inventory).filter(Inventory.id == item_id, Inventory.location == server_id).first()
+    inventory = db_session.query(Inventory).filter(Inventory.id == item_id, 
+                                                   Inventory.location == server_id,
+                                                   Inventory.activated == True).first()
     if not inventory:
         raise HTTPException(status_code=404, detail="Item not found")
     return inventory
