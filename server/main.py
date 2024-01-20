@@ -371,6 +371,7 @@ def buy_inventory(ids: List[int]):
             # json_data = response.json()
             # if json_data['Status'] != 'Success':
             db_session.rollback()
+            db_session.close()
             bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to reach agreement with partner"}
             return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
         else:
@@ -378,6 +379,7 @@ def buy_inventory(ids: List[int]):
             dirty_ids = json_data["inventory_ids"]
             # Marking received ids are dirty to mirror the partner's DB
             # ? Do I need to only mark activated keys as well?
+            # Duplicate of query below
             db_session.query(Inventory).filter(Inventory.id.in_(dirty_ids)).update({ Inventory.is_dirty: True })
             db_session.commit()
 
@@ -390,12 +392,14 @@ def buy_inventory(ids: List[int]):
     # db_session.commit()
 
     # OR: db_session.query(Inventory).filter(Inventory.id == 2, Inventory.availability == "Available").update({ Inventory.availability: "Reserved for 1" }, synchronize_session=False)
+    # By definition, if the request has gotten this far, the inventory should be dirty and write locked
     db_session.query(Inventory).filter(Inventory.id.in_(dirty_ids), 
                                        Inventory.availability == "Available",
                                        Inventory.location == server_id,
                                        Inventory.activated == True,
                                        Inventory.write_locked != True).update({ Inventory.availability: "Reserved", 
                                                                           Inventory.transaction_id: transaction_id,
+                                                                          Inventory.is_dirty: True,
                                                                           Inventory.write_locked: True}
                                                                                      , synchronize_session=False)
     db_session.commit()
@@ -425,7 +429,7 @@ async def submit_payment_details(request: Request):
     if cc_no and transaction_id:
         db_session.query(Inventory).filter(Inventory.availability == "Reserved",
                                            Inventory.write_locked == True,
-                                           Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased", Inventory.write_locked: False})
+                                           Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased", Inventory.write_locked: False, Inventory.is_dirty: True})
         db_session.commit()
         db_session.close()
         # Potentially might want to transmit this update to the partner server
