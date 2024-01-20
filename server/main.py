@@ -425,9 +425,10 @@ async def submit_payment_details(request: Request):
     if cc_no and transaction_id:
         db_session.query(Inventory).filter(Inventory.availability == "Reserved",
                                            Inventory.write_locked == True,
-                                           Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased"})
+                                           Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased", Inventory.write_locked: False})
         db_session.commit()
         db_session.close()
+        # Potentially might want to transmit this update to the partner server
     else:
         raise HTTPException(status_code=400, detail="Missing payment details or transaction ID")
     purchased_tickets = db_session.query(Inventory).filter(Inventory.transaction_id == transaction_id).all()
