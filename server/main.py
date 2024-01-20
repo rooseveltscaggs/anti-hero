@@ -268,7 +268,9 @@ def deactivate_inventory(ids: List[int], send_data: bool = False):
     # reserved_ids = []
 
     # Locking mechanism is for buy transaction -- so in progress transactions can continue
-    db_session.query(Inventory).filter(Inventory.id.in_(ids), Inventory.locked == False).update({Inventory.last_modified_by: transaction_id,
+    # In order to deactivate inventory, inventory must not be write locked or marked dirty on either the primary or the backup
+    # In other words, the data must not have been touched by either OR it must have been synchronized after a write
+    db_session.query(Inventory).filter(Inventory.id.in_(ids), Inventory.write_locked != True, Inventory.is_dirty != True).update({Inventory.last_modified_by: transaction_id,
                                                                                                  Inventory.location: 0,
                                                                                                  Inventory.activated: False}, synchronize_session = False)
     
@@ -374,6 +376,10 @@ def buy_inventory(ids: List[int]):
         else:
             json_data = response.json()
             dirty_ids = json_data["inventory_ids"]
+            # Marking received ids are dirty to mirror the partner's DB
+            # ? Do I need to only mark activated keys as well?
+            db_session.query(Inventory).filter(Inventory.id.in_(dirty_ids)).update({ Inventory.is_dirty: True })
+            db_session.commit()
 
 
 
@@ -388,16 +394,16 @@ def buy_inventory(ids: List[int]):
                                        Inventory.availability == "Available",
                                        Inventory.location == server_id,
                                        Inventory.activated == True,
-                                       Inventory.locked == False).update({ Inventory.availability: "Reserved", 
+                                       Inventory.write_locked != True).update({ Inventory.availability: "Reserved", 
                                                                           Inventory.transaction_id: transaction_id,
-                                                                          Inventory.locked: True}
+                                                                          Inventory.write_locked: True}
                                                                                      , synchronize_session=False)
     db_session.commit()
     db_session.close()
 
     successful_ids_obj = db_session.query(Inventory.id).filter(Inventory.transaction_id == transaction_id, 
                                                                Inventory.availability == "Reserved",
-                                                               Inventory.locked == True).all()
+                                                               Inventory.write_locked == True).all()
     reserved_ids = [i[0] for i in successful_ids_obj]
 
     # Might need some type of pausing feature to allow cleanup/synchronization
@@ -418,7 +424,7 @@ async def submit_payment_details(request: Request):
     cc_no = json_data["credit_card_number"]
     if cc_no and transaction_id:
         db_session.query(Inventory).filter(Inventory.availability == "Reserved",
-                                           Inventory.locked == True,
+                                           Inventory.write_locked == True,
                                            Inventory.transaction_id == transaction_id).update({Inventory.availability: "Purchased"})
         db_session.commit()
         db_session.close()

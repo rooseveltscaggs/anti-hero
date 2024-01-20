@@ -40,32 +40,33 @@ class Server(Base):
     description = Column(String(), nullable=True)
 
     def as_dict(self):
-       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-       if self.last_updated is not None:
-          self_dict['last_updated'] = self.last_updated.isoformat()
-       return self_dict
+      self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+      self_dict["last_updated"] = None if not self.last_updated else self.last_updated.isoformat()
+      return self_dict
 
 class Inventory(Base):
-    __tablename__ = 'inventory'
-    id = Column(Integer(), primary_key=True, nullable=False)
-    section = Column(String(), nullable=True)
-    row = Column(String(), nullable=True)
-    seat = Column(String(), nullable=True)
-    desirability = Column(Integer(), nullable=True)
-    location = Column(Integer(), nullable=True)
-    price = Column(Integer(), nullable=True)
-    availability = Column(String(), nullable=True)
-    description = Column(String(), nullable=True)
-    transaction_id = Column(String(), nullable=True)
-    on_backup = Column(Boolean(), nullable=True)
-    is_dirty = Column(Boolean(), nullable=True)
-    activated = Column(Boolean(), nullable=True)
-    locked = Column(Boolean(), nullable=True)
-    status_last_updated = Column(DateTime(), nullable=True)
-    last_modified_by = Column(String(), nullable=True)
+   __tablename__ = 'inventory'
+   id = Column(Integer(), primary_key=True, nullable=False)
+   section = Column(String(), nullable=True)
+   row = Column(String(), nullable=True)
+   seat = Column(String(), nullable=True)
+   desirability = Column(Integer(), nullable=True)
+   location = Column(Integer(), nullable=True)
+   price = Column(Integer(), nullable=True)
+   availability = Column(String(), nullable=True)
+   description = Column(String(), nullable=True)
+   transaction_id = Column(String(), nullable=True)
+   on_backup = Column(Boolean(), nullable=True, default=False)
+   is_dirty = Column(Boolean(), nullable=True, default=False)
+   activated = Column(Boolean(), nullable=True, default=False)
+   write_locked = Column(Boolean(), nullable=True, default=False)
+   status_last_updated = Column(DateTime(), nullable=True)
+   last_modified_by = Column(String(), nullable=True)
 
-    def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+   def as_dict(self):
+      self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+      self_dict["status_last_updated"] = None if not self.status_last_updated else self.status_last_updated.isoformat()
+      return self_dict
 
 class WorkerTask(Base):
     __tablename__ = 'worker_tasks'
@@ -79,18 +80,18 @@ class WorkerTask(Base):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Reservation(Base):
-    __tablename__ = 'inventory_reservations'
-    id = Column(Integer(), primary_key=True, nullable=False)
-    server_id = Column(Integer(), nullable=True)
-    ip_address = Column(String(), nullable=True)
-    inventory_id = Column(Integer(), nullable=True)
-    reserve_datetime = Column(DateTime(), nullable=True)
-    expiry_time = Column(DateTime(), nullable=True)
-    status = Column(String(), nullable=True)
-    global_transaction_id = Column(String(), nullable=True)
-    forwarded = Column(Boolean(), nullable=True)
+   __tablename__ = 'inventory_reservations'
+   id = Column(Integer(), primary_key=True, nullable=False)
+   server_id = Column(Integer(), nullable=True)
+   ip_address = Column(String(), nullable=True)
+   inventory_id = Column(Integer(), nullable=True)
+   reserve_datetime = Column(DateTime(), nullable=True)
+   expiry_time = Column(DateTime(), nullable=True)
+   status = Column(String(), nullable=True)
+   global_transaction_id = Column(String(), nullable=True)
+   forwarded = Column(Boolean(), nullable=True)
 
-    def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+   def as_dict(self):
+      return {c.name: getattr(self, c.name) for c in self.__table__.columns}
     
     

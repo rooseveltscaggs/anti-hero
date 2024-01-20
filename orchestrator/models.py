@@ -40,10 +40,9 @@ class Server(Base):
     description = Column(String(), nullable=True)
 
     def as_dict(self):
-       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-       if self.last_updated is not None:
-          self_dict['last_updated'] = self.last_updated.isoformat()
-       return self_dict
+      self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+      self_dict["last_updated"] = None if not self.last_updated else self.last_updated.isoformat()
+      return self_dict
 
 class Inventory(Base):
    __tablename__ = 'inventory'
@@ -60,7 +59,7 @@ class Inventory(Base):
    on_backup = Column(Boolean(), nullable=True, default=False)
    is_dirty = Column(Boolean(), nullable=True, default=False)
    activated = Column(Boolean(), nullable=True, default=False)
-   locked = Column(Boolean(), nullable=True, default=False)
+   write_locked = Column(Boolean(), nullable=True, default=False)
    status_last_updated = Column(DateTime(), nullable=True)
    last_modified_by = Column(String(), nullable=True)
 

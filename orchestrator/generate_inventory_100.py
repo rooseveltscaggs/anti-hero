@@ -23,7 +23,7 @@ for i in range(101, 105):
             new_inv.location = 0
             new_inv.is_dirty = False
             new_inv.on_backup = False
-            new_inv.locked = False
+            new_inv.write_locked = False
             new_inv.activated = False
             new_inv.availability = "Available"
             new_inv.section = str(i)

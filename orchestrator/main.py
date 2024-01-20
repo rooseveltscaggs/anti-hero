@@ -295,7 +295,7 @@ def reserve_orchestrator_inventory(inventory_ids, new_location):
     # If stored on Orchestrator, lock data first then query for successfully locked data
     db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), 
                                         Inventory.location == 0, 
-                                        Inventory.locked == False).update({Inventory.locked: True, Inventory.last_modified_by: transaction_id}, synchronize_session = False)
+                                        Inventory.write_locked != True).update({Inventory.write_locked: True, Inventory.last_modified_by: transaction_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
 
@@ -411,7 +411,7 @@ def transfer_inventory(inventory_ids, current_location, new_location):
     else:
         db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids),
                                            Inventory.location == current_location, 
-                                           Inventory.locked == False).update({Inventory.location: new_location}, synchronize_session=False)
+                                           Inventory.write_locked != True).update({Inventory.location: new_location}, synchronize_session=False)
         db_session.commit()
         db_session.close()
         deactivated_ids = inventory_ids
@@ -431,7 +431,7 @@ def reset():
     default_inv_dict = {
         Inventory.availability: "Available",
         Inventory.is_dirty: False,
-        Inventory.locked: False,
+        Inventory.write_locked: False,
         Inventory.location: 0,
         Inventory.on_backup: False,
         Inventory.transaction_id: None

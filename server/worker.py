@@ -113,7 +113,7 @@ def request_authority():
 def update_authority():
     partner_id = retrieve_registry("Partner_ID")
     server_id = retrieve_registry("Server_ID")
-    db_session.query(Inventory).filter(Inventory.location == partner_id, Inventory.is_dirty == False).update({Inventory.location: server_id}, synchronize_session = False)
+    db_session.query(Inventory).filter(Inventory.location == partner_id, Inventory.is_dirty != True).update({Inventory.location: server_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
     return True
@@ -150,9 +150,11 @@ def attempt_recovery(relinquished_ids):
 
 def relinquish_inventory():
     server_id = retrieve_registry("Server_ID")
-    query = db_session.query(Inventory).filter(Inventory.locked == False,
+    query = db_session.query(Inventory).filter(Inventory.write_locked != True,
+                                               Inventory.is_dirty != True,
                                        Inventory.location == server_id)
-    prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.locked == False,
+    prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.write_locked != True,
+                                                               Inventory.is_dirty != True,
                                                       Inventory.location == 0,
                                                       Inventory.on_backup == True).all()
     # Get IDs of unlocked inventory (this will be requested later)
