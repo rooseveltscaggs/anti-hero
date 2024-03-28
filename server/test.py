@@ -20,6 +20,7 @@ models.Base.metadata.create_all(bind=engine)
 
 
 def readItem(model, query_filter=None):
+    return db_session.query(Server).filter(Server.id == 1).all()
     query = db_session.query(model)
     if filter:
         query = query.filter(query_filter)
