@@ -46,6 +46,7 @@ class Server(Base):
 
 class Inventory(Base):
    __tablename__ = 'inventory'
+   # Data fields
    id = Column(Integer(), primary_key=True, nullable=False)
    section = Column(String(), nullable=True)
    row = Column(String(), nullable=True)
@@ -56,6 +57,7 @@ class Inventory(Base):
    availability = Column(String(), nullable=True)
    description = Column(String(), nullable=True)
    transaction_id = Column(String(), nullable=True)
+   # Metadata fields for Anti-Hero
    on_backup = Column(Boolean(), nullable=True, default=False)
    is_dirty = Column(Boolean(), nullable=True, default=False)
    activated = Column(Boolean(), nullable=True, default=False)

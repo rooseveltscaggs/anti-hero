@@ -24,10 +24,12 @@ models.Base.metadata.create_all(bind=engine)
 
 TRANSACT_ID_LENGTH = 10
 
+
 def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
+
 
 def update_server_status(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
