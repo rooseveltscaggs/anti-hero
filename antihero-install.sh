@@ -18,7 +18,7 @@ read init
 # fi
 
 USER=$(whoami)
-# /Users/rscaggs/git/anti-hero
+# Example: /Users/rscaggs/git/anti-hero
 WORKDIR=$(pwd)
 old_text="TEXTDIR"
 old_listen_address="#listen_addresses = 'localhost'"
@@ -31,6 +31,7 @@ sudo apt -y install python3-pip
 # sudo apt -y install nginx
 sudo systemctl start postgresql.service
 cd /var/lib/postgresql
+# Standard password is used for experiments only
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'newpassword';"
 sudo ufw allow 5432/tcp
 sudo ufw allow 80/tcp
@@ -43,8 +44,8 @@ sudo cp -rf "$WORKDIR/config/pg_hba.conf" /etc/postgresql/14/main/pg_hba.conf
 sudo service postgresql restart
 
 cd "$WORKDIR"
-sudo rm -rf env/
-python3.10 -m venv env
+rm -rf /env
+python3.10 -m venv ./env
 source env/bin/activate
 env/bin/pip install -r "$WORKDIR/config/requirements.txt"
 deactivate
