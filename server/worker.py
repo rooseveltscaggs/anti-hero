@@ -102,6 +102,7 @@ def request_authority():
             print ("Timeout Error:",errt)
         except requests.exceptions.RequestException as err:
             print ("Oops: Something Else",err)
+        time.sleep(10)
 
     if response.ok:
         store_registry("In_Backup", True)
