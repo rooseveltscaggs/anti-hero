@@ -47,7 +47,7 @@ class Server(Base):
 class Inventory(Base):
    __tablename__ = 'inventory'
    # Data fields
-   id = Column(Integer(), primary_key=True, nullable=False)
+   id = Column(Integer(), primary_key=True, nullable=False, autoincrement=True)
    section = Column(String(), nullable=True)
    row = Column(String(), nullable=True)
    seat = Column(String(), nullable=True)
