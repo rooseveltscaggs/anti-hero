@@ -46,6 +46,7 @@ class Server(Base):
 
 class Inventory(Base):
    __tablename__ = 'inventory'
+   # Data fields
    id = Column(Integer(), primary_key=True, nullable=False)
    section = Column(String(), nullable=True)
    row = Column(String(), nullable=True)
@@ -56,6 +57,9 @@ class Inventory(Base):
    availability = Column(String(), nullable=True)
    description = Column(String(), nullable=True)
    transaction_id = Column(String(), nullable=True)
+   # Internal metadata fields for Anti-Hero
+   # Creating a composite key with committed field
+   committed = Column(Boolean(), primary_key=True, nullable=False, default=False)
    on_backup = Column(Boolean(), nullable=True, default=False)
    is_dirty = Column(Boolean(), nullable=True, default=False)
    activated = Column(Boolean(), nullable=True, default=False)
@@ -67,6 +71,7 @@ class Inventory(Base):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
       self_dict["status_last_updated"] = None if not self.status_last_updated else self.status_last_updated.isoformat()
       return self_dict
+
 
 class WorkerTask(Base):
     __tablename__ = 'worker_tasks'
