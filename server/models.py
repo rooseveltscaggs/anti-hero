@@ -57,7 +57,9 @@ class Inventory(Base):
    availability = Column(String(), nullable=True)
    description = Column(String(), nullable=True)
    transaction_id = Column(String(), nullable=True)
-   # Metadata fields for Anti-Hero
+   # Internal metadata fields for Anti-Hero
+   # Creating a composite key with committed field
+   committed = Column(Boolean(), primary_key=True, nullable=False, default=False)
    on_backup = Column(Boolean(), nullable=True, default=False)
    is_dirty = Column(Boolean(), nullable=True, default=False)
    activated = Column(Boolean(), nullable=True, default=False)
