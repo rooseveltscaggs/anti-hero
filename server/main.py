@@ -166,8 +166,8 @@ def send_write_to_backup(model, data):
             if response.ok:
                 json_data = response.json()
 
-                requested_ids = [obj.id for obj in data]
-                accepted_ids = [obj.id for obj in json_data]
+                requested_ids = [obj['id'] for obj in data]
+                accepted_ids = [obj['id'] for obj in json_data]
 
                 # Removing tentative commits not accepted by backup
                 nonaccepted_ids = list_difference(requested_ids, accepted_ids)
@@ -461,7 +461,7 @@ async def prepare_inventory_commits(request: Request):
 async def update_all_inventory(request: Request):
     json_data = await request.json()
     print(json_data)
-    inv_ids = [obj.id for obj in json_data]
+    inv_ids = [obj['id'] for obj in json_data]
     db_session.query(Inventory).filter(Inventory.id.in_(inv_ids), Inventory.committed == False).delete(synchronize_session=False)
     db_session.commit()
     for item in json_data:
