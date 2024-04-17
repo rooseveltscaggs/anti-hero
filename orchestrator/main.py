@@ -163,14 +163,16 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
             server2_url = f'http://{server2.ip_address}:{server2.port}/partner?partner_id={server1_id}'
             response = requests.request("PUT", server2_url)
             if response.ok:
+                print("Updating partners")
                 server1.partner_id = server2_id
                 server2.partner_id = server1_id
+        print("Committing to database")
         db_session.commit()
         db_session.close()
 
         # transfer_inventory(server1_keys, 0, server1_id)
         # transfer_inventory(server2_keys, 0, server2_id)
-        
+
         # background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
         # background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
         return {"Status": "Paired"}
