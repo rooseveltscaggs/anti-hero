@@ -164,8 +164,8 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
             response = requests.request("PUT", server2_url)
             if response.ok:
                 print("Updating partners")
-                server1.partner_id = int(server2_id)
-                server2.partner_id = int(server1_id)
+                server1.partner_id = server2.id
+                server2.partner_id = server1.id
                 print("Server 1 partner: " + str(server1.partner_id))
                 print("Server 2 partner: " + str(server2.partner_id))
                 print("Committing to database")
