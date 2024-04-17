@@ -163,10 +163,12 @@ def attempt_recovery(relinquished_ids):
 def relinquish_inventory():
     server_id = retrieve_registry("Server_ID")
     partner_id = retrieve_registry("Partner_ID")
-    query = db_session.query(Inventory).filter(Inventory.location == server_id)
+    local_inv_query = db_session.query(Inventory).filter(Inventory.location == server_id)
+    partner_inv_query = db_session.query(Inventory).filter(Inventory.location == partner_id)
+
     prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.on_backup == True).all()
     # Get IDs of unlocked inventory (this will be requested later)
-    relinquished_ids = query.all()
+    relinquished_ids = local_inv_query.all()
     relinquished_ids = [record.id for record in relinquished_ids]
 
     prev_relinquished_ids = [record.id for record in prev_relinquished_ids]
@@ -174,7 +176,9 @@ def relinquish_inventory():
 
     # Move all unlocked inventory to Orchestrator with a special backup marker
     # to denote relinquished inventory
-    query.update({ Inventory.location: partner_id, Inventory.activated: False, Inventory.on_backup: True }, synchronize_session=False)
+    # Mark as inventory for self or partner as belonging to partner + deactivate
+    local_inv_query.update({ Inventory.location: partner_id, Inventory.activated: False, Inventory.on_backup: True }, synchronize_session=False)
+    partner_inv_query.update({ Inventory.location: partner_id, Inventory.activated: False }, synchronize_session=False)
     db_session.query(Inventory).filter(Inventory.committed == False).delete(synchronize_session=False)
     db_session.commit()
     return relinquished_ids + prev_relinquished_ids
@@ -202,6 +206,8 @@ def failure_detection():
                         print("Authority denied... attempting recovery")
                         store_registry("Status", "Disabled")
                         relinquished_ids = relinquish_inventory()
+                        # Set to Solo Mode
+                        store_registry("Partner_ID", None)
                         attempt_recovery(relinquished_ids)
             db_session.close()
         else:

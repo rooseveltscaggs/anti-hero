@@ -66,6 +66,7 @@ class Inventory(Base):
    # on_backup = Column(Boolean(), nullable=True, default=False)
    # is_dirty = Column(Boolean(), nullable=True, default=False)
    # status_last_updated = Column(DateTime(), nullable=True)
+   # last_write = Column(DateTime(), nullable=True)
 
    def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
