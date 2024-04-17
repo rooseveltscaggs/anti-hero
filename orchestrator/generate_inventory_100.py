@@ -25,6 +25,7 @@ for i in range(101, 105):
             new_inv.on_backup = False
             new_inv.write_locked = False
             new_inv.activated = False
+            new_inv.committed = True
             new_inv.availability = "Available"
             new_inv.section = str(i)
             new_inv.row = str(j)
