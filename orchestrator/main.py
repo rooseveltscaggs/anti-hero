@@ -168,8 +168,8 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
                 server2.partner_id = server1.id
                 print("Server 1 partner: " + str(server1.partner_id))
                 print("Server 2 partner: " + str(server2.partner_id))
-                print("Committing to database")
                 db_session.commit()
+                print("Committing to database")
                 db_session.close()
 
         # transfer_inventory(server1_keys, 0, server1_id)
