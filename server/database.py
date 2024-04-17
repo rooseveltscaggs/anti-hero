@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, exc
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:newpassword@172.16.208.130:5432/postgres"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:newpassword@localhost:5432/postgres"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
