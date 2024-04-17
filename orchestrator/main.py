@@ -143,6 +143,9 @@ def create_server(host_ip: str, request: Request, background_tasks: BackgroundTa
 def start_pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundTasks):
     server1 = db_session.query(Server).filter(Server.id == server1_id).first()
     server2 = db_session.query(Server).filter(Server.id == server2_id).first()
+    server1.partner_id = server2.id
+    server2.partner_id = server1.id
+    db_session.commit()
     if server1 and server2:
         if server1.partner_id or server2.partner_id:
             return {"Status": "Server(s) already paired"} 
