@@ -239,7 +239,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
         # if failed_server.partner_id == backup_server_id:
         #     return {"Status": "Granted"}
         # If reporting server was already promoted/not in a partnership  OR it has a partnership AND the other node matches
-        if not backup_server.partner_id or (backup_server_id.partner_id and failed_server.partner_id == backup_server_id):
+        if not backup_server.partner_id or (backup_server.partner_id and failed_server.partner_id == backup_server_id):
             print("Granting authority...")
             # failed_server.in_failure = True
             # backup_server.in_backup = True
