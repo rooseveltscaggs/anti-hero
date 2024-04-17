@@ -164,8 +164,8 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
             response = requests.request("PUT", server2_url)
             if response.ok:
                 print("Updating partners")
-                server1.partner_id = server2_id
-                server2.partner_id = server1_id
+                server1.partner_id = int(server2_id)
+                server2.partner_id = int(server1_id)
         print("Committing to database")
         db_session.commit()
         db_session.close()
@@ -173,8 +173,8 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
         # transfer_inventory(server1_keys, 0, server1_id)
         # transfer_inventory(server2_keys, 0, server2_id)
 
-        # background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
-        # background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
+        background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
+        background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
         return {"Status": "Paired"}
     else:
         return {"Status": "Server(s) not found"}
