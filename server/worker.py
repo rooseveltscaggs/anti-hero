@@ -114,7 +114,18 @@ def request_authority():
 def update_authority():
     partner_id = retrieve_registry("Partner_ID")
     server_id = retrieve_registry("Server_ID")
-    db_session.query(Inventory).filter(Inventory.location == partner_id, Inventory.is_dirty != True).update({Inventory.location: server_id}, synchronize_session = False)
+
+    uncommitted_objs = db_session.query(Inventory.id).filter(Inventory.committed == False, Inventory.activated == True).all()
+    uncomitted_ids = [obj[0] for obj in uncommitted_objs]
+
+    # Committing uncommitted records
+    db_session.query(Inventory).filter(Inventory.id.in_(uncomitted_ids), Inventory.committed == True, Inventory.activated == True).delete(synchronize_session=False)
+    db_session.query(Inventory).filter(Inventory.id.in_(uncomitted_ids), Inventory.committed == False, Inventory.activated == True).update({Inventory.committed: True}, synchronize_session=False)
+    db_session.commit()
+
+    # Set location as self + commit any pending transactions
+    # ! Might be a problem if there's still trash records
+    db_session.query(Inventory).filter(Inventory.location == partner_id).update({Inventory.location: server_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
     return True
@@ -151,13 +162,9 @@ def attempt_recovery(relinquished_ids):
 
 def relinquish_inventory():
     server_id = retrieve_registry("Server_ID")
-    query = db_session.query(Inventory).filter(Inventory.write_locked != True,
-                                               Inventory.is_dirty != True,
-                                       Inventory.location == server_id)
-    prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.write_locked != True,
-                                                               Inventory.is_dirty != True,
-                                                      Inventory.location == 0,
-                                                      Inventory.on_backup == True).all()
+    partner_id = retrieve_registry("Partner_ID")
+    query = db_session.query(Inventory).filter(Inventory.location == server_id)
+    prev_relinquished_ids = db_session.query(Inventory).filter(Inventory.on_backup == True).all()
     # Get IDs of unlocked inventory (this will be requested later)
     relinquished_ids = query.all()
     relinquished_ids = [record.id for record in relinquished_ids]
@@ -167,7 +174,8 @@ def relinquish_inventory():
 
     # Move all unlocked inventory to Orchestrator with a special backup marker
     # to denote relinquished inventory
-    query.update({ Inventory.location: 0, Inventory.activated: False, Inventory.on_backup: True })
+    query.update({ Inventory.location: partner_id, Inventory.activated: False, Inventory.on_backup: True }, synchronize_session=False)
+    db_session.query(Inventory).filter(Inventory.committed == False).delete(synchronize_session=False)
     db_session.commit()
     return relinquished_ids + prev_relinquished_ids
 

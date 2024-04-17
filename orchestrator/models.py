@@ -57,20 +57,25 @@ class Inventory(Base):
    availability = Column(String(), nullable=True)
    description = Column(String(), nullable=True)
    transaction_id = Column(String(), nullable=True)
+   last_modified_by = Column(String(), nullable=True)
    # Internal metadata fields for Anti-Hero
    # Creating a composite key with committed field
    committed = Column(Boolean(), primary_key=True, nullable=False, default=False)
-   on_backup = Column(Boolean(), nullable=True, default=False)
-   is_dirty = Column(Boolean(), nullable=True, default=False)
    activated = Column(Boolean(), nullable=True, default=False)
    write_locked = Column(Boolean(), nullable=True, default=False)
-   status_last_updated = Column(DateTime(), nullable=True)
-   last_modified_by = Column(String(), nullable=True)
+   # on_backup = Column(Boolean(), nullable=True, default=False)
+   # is_dirty = Column(Boolean(), nullable=True, default=False)
+   # status_last_updated = Column(DateTime(), nullable=True)
 
    def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
       self_dict["status_last_updated"] = None if not self.status_last_updated else self.status_last_updated.isoformat()
       return self_dict
+   
+   def copy(self, new_object):
+      for col in self.__table__.columns:
+         setattr(new_object, col.name, getattr(self, col.name))
+      new_object.committed = False
 
 
 class WorkerTask(Base):

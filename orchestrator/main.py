@@ -17,6 +17,13 @@ models.Base.metadata.create_all(bind=engine)
 
 TRANSACT_ID_LENGTH = 10
 
+def list_difference(list1, list2):
+    set1 = set(list1)
+    set2 = set(list2)
+    diff = set1.difference(set2)
+    diff_list = list(diff)
+    return diff_list
+
 def common_elements(list1, list2):
     set1 = set(list1)
     set2 = set(list2)
@@ -28,6 +35,7 @@ def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
+
 
 def update_server_status(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
@@ -132,10 +140,23 @@ def create_server(host_ip: str, request: Request, background_tasks: BackgroundTa
 
 
 @app.put("/pair")
-def pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundTasks):
+def start_pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundTasks):
     server1 = db_session.query(Server).filter(Server.id == server1_id).first()
     server2 = db_session.query(Server).filter(Server.id == server2_id).first()
     if server1 and server2:
+        if server1.partner_id or server2.partner_id:
+            return {"Status": "Server(s) already paired"} 
+
+        # Deactivate all data on both nodes (stored locally)
+        server1_keys = db_session.query(Inventory.id).filter(Inventory.location == server1_id).all()
+        server2_keys = db_session.query(Inventory.id).filter(Inventory.location == server2_id).all()
+        server1_keys = [obj[0] for obj in server1_keys]
+        server2_keys = [obj[0] for obj in server2_keys]
+
+        server1_keys = request_deactivation(server1_id, server1_keys, True)
+        server2_keys = request_deactivation(server2_id, server2_keys, True)
+
+        # Pair nodes together now that inventory is deactivated
         server1_url = f'http://{server1.ip_address}:{server1.port}/partner?partner_id={server2_id}'
         response = requests.request("PUT", server1_url)
         if response.ok:
@@ -146,8 +167,11 @@ def pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundT
                 server2.partner_id = server1_id
         db_session.commit()
         db_session.close()
-        background_tasks.add_task(send_inventory, server1_id)
-        background_tasks.add_task(send_inventory, server2_id)
+
+        # transfer_inventory(server1_keys, 0, server1_id)
+        # transfer_inventory(server2_keys, 0, server2_id)
+        background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
+        background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
         return {"Status": "Paired"}
     else:
         return {"Status": "Server(s) not found"}
@@ -203,22 +227,38 @@ def report_failure(failed_server_id: int, backup_server_id: int):
     backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
     db_session.refresh(failed_server)
     db_session.refresh(backup_server)
+
+
     if failed_server and backup_server:
-        if not backup_server.in_failure and not failed_server.in_backup:
+
+        # if failed_server.partner_id == backup_server_id:
+        #     return {"Status": "Granted"}
+        # If reporting server was already promoted/not in a partnership  OR it has a partnership AND the other node matches
+        if not backup_server.partner_id or (backup_server_id.partner_id and failed_server.partner_id == backup_server_id):
             print("Granting authority...")
-            failed_server.in_failure = True
-            backup_server.in_backup = True
+            # failed_server.in_failure = True
+            # backup_server.in_backup = True
+
+            # Promoting/reverting (reporting) backup server to solo mode
+            backup_server.partner_id = None
             db_session.commit()
             db_session.close()
-        else:
-            print("Denying authority...")
-            bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
-            db_session.close()
-            return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
-    return {"Status": "Granted"}
+            return {"Status": "Granted"}
+        
+        
+        
+        
+    print("Denying authority...")
+    bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
+    db_session.close()
+    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
+           
 
 @app.put("/initiate-recovery")
 async def initiate_recovery(request: Request, background_tasks: BackgroundTasks):
+    # Receiving this request means the failed node is acknowledging
+    # its failure and has already relinquished its old local data
+    # Therefore, we can now safely mark it as being in Solo Mode
     print("Recovery request received...")
     json_data = await request.json()
     
@@ -227,31 +267,58 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
 
     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
     backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
-    
-    db_session.refresh(failed_server)
-    db_session.refresh(backup_server)
 
     failed_server_id = failed_server.id
     backup_server_id = backup_server.id
 
-    if not failed_server.in_failure or not backup_server.in_backup:
-        bad_resp = {"Status": "Denied", "Reason": "Conditions not met for recovery"}
-        db_session.close()
-        return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
+    # Set previously failed node to Solo Mode
+    failed_server.partner_id = None
+    db_session.commit()
 
-    backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server.id}'
+    db_session.refresh(failed_server)
+    db_session.refresh(backup_server)
+
+    # If previous partner has already been re-matched, allow previously failed node to simply operate in Solo Mode
+    if backup_server.partner_id:
+        # Officially return failed_server to solo mode
+        # failed_server.partner_id = None
+        # db_session.commit()
+        # db_session.close()
+        return {"Status": "Previous Partner Unavailable: Begin Operating in Solo Mode"}
+
+    
+    # If previous partner is in Solo Mode (aka can be re-paired with failed node)
+
+    # (Silently) deactivate data on previous partner
+    backup_records = db_session.query(Inventory.id).filter(Inventory.location == backup_server_id).all()
+    backup_keys = [obj[0] for obj in backup_records]
+    deactivated_keys = request_deactivation(backup_server_id, backup_keys, False)
+
+
+    # Temporarily mark successfully deactivated keys as belonging to Orchestrator (location = 0)
+    # db_session.query(Inventory).filter(Inventory.id.in_(deactivated_keys)).update({ Inventory.location: 0 }, synchronize_session=False)
+    # db_session.commit()
+
+
+
+    # Pair servers together
+    backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
     backup_server_resp = requests.request("PUT", backup_server_url)
     if backup_server_resp.ok:
-        failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server.id}'
+        failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
         failed_server_resp = requests.request("PUT", failed_server_url)
         if failed_server_resp.ok:
-            failed_server.in_failure = False
-            backup_server.in_backup = False
+            failed_server.partner_id = backup_server_id
+            backup_server.partner_id = failed_server_id
             db_session.commit()
             db_session.close()
+
+    
     # The deactivation step of transfer_inventory might be redundant for this case
     # as the failed partner has assumedly already deactivated all of its inventory
-    background_tasks.add_task(transfer_inventory, relinquished_ids, backup_server_id, failed_server_id)
+
+    # sync_inventory(relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
+    background_tasks.add_task(sync_inventory, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
     return {"Status": "Queued: Begin Operating"}
 
 def send_server_map(server_id):
@@ -290,6 +357,37 @@ def send_inventory(server_id):
     db_session.commit()
     db_session.close()
 
+# Relinquished IDs are the keys the previously failed node is requesting to regain
+# Deactivated IDs are all the keys successfully (deactivated)
+# The remaining deactivated keys are ones to be assigned to the src_server
+def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server_id):
+    # Node that didn't fail
+    src_server = db_session.query(Server).filter(Server.id == src_server_id).first()
+    # Node that previously failed
+    dest_server = db_session.query(Server).filter(Server.id == dest_server_id).first()
+    
+    CHUNK_SIZE = 1000
+
+    curr_idx = 0
+    while curr_idx < len(relinquished_ids):
+        chunk = relinquished_ids[curr_idx:curr_idx+CHUNK_SIZE]
+        deactivated_ids = request_deactivation(src_server_id, chunk, True)
+        send_and_activate(dest_server, deactivated_ids)
+
+        curr_idx = (curr_idx+CHUNK_SIZE)
+
+    remaining_ids = list_difference(relinquished_ids, deactivated_ids)
+
+    curr_idx = 0
+    while curr_idx < len(remaining_ids):
+        chunk = remaining_ids[curr_idx:curr_idx+CHUNK_SIZE]
+        deactivated_ids = request_deactivation(src_server_id, chunk, True)
+        send_and_activate(src_server_id, deactivated_ids)
+
+        curr_idx = (curr_idx+CHUNK_SIZE)
+    db_session.close()
+
+
 def reserve_orchestrator_inventory(inventory_ids, new_location):
     transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
     # If stored on Orchestrator, lock data first then query for successfully locked data
@@ -299,7 +397,7 @@ def reserve_orchestrator_inventory(inventory_ids, new_location):
     db_session.commit()
     db_session.close()
 
-def request_deactivation(server_id, inventory_ids, write_to_database=False):
+def request_deactivation(server_id, inventory_ids, write_to_database=False, new_location=0):
     # curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
     deactivated_ids = []
     CHUNK_SIZE = 1000
@@ -310,7 +408,7 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
     while curr_idx < len(inventory_ids):
         chunk = inventory_ids[curr_idx:curr_idx+CHUNK_SIZE]
         # sending chunk
-        curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/deactivate{"?send_data=True" if write_to_database else ""}'
+        curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/deactivate?new_location={new_location}{"&send_data=True" if write_to_database else ""}'
         response = requests.request("PUT", curr_url, headers={}, json = chunk)
         if response.ok:
             # If the response status code is 200 (OK), parse the response as JSON
@@ -326,6 +424,7 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False):
                     #     db_session.add(inv_obj)
                     for key in item.keys():
                         setattr(inv_obj, key, item[key])
+                    inv_obj.location = 0
                 db_session.commit()
                 db_session.close()
             else:
@@ -402,19 +501,20 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         print("Requesting deactivation of inventory...")
         # If partner, send (non-writing) deactivation request to partner
         if curr_partner_id:
-            deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
+            deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, True)
         
         # Then send (writing) deactivation request to main node
-        deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
+        deactivated_ids_primary = request_deactivation(current_location, inventory_ids, False)
 
         deactivated_ids = common_elements(deactivated_ids_partner, deactivated_ids_primary)
     else:
-        db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids),
-                                           Inventory.location == current_location, 
-                                           Inventory.write_locked != True).update({Inventory.location: new_location}, synchronize_session=False)
-        db_session.commit()
+        # db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids),
+        #                                    Inventory.location == current_location, 
+        #                                    Inventory.write_locked != True).update({Inventory.location: new_location}, synchronize_session=False)
+        # db_session.commit()
+        orc_keys = db_session.query(Inventory.id).filter(Inventory.id.in_(inventory_ids), Inventory.location == current_location).all()
+        deactivated_ids = [obj[0] for obj in orc_keys]
         db_session.close()
-        deactivated_ids = inventory_ids
     # Next, check if destination server has partner
     print("Sending and activating inventory...")
     send_and_activate(new_location, deactivated_ids)
