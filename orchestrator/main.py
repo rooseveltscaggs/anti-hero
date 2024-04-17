@@ -143,9 +143,6 @@ def create_server(host_ip: str, request: Request, background_tasks: BackgroundTa
 def start_pair_servers(server1_id: int, server2_id: int, background_tasks: BackgroundTasks):
     server1 = db_session.query(Server).filter(Server.id == server1_id).first()
     server2 = db_session.query(Server).filter(Server.id == server2_id).first()
-    server1.partner_id = server2.id
-    server2.partner_id = server1.id
-    db_session.commit()
     if server1 and server2:
         if server1.partner_id or server2.partner_id:
             return {"Status": "Server(s) already paired"} 
@@ -160,6 +157,8 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
         server2_keys = request_deactivation(server2_id, server2_keys, True)
 
         # Pair nodes together now that inventory is deactivated
+        server1 = db_session.query(Server).filter(Server.id == server1_id).first()
+        server2 = db_session.query(Server).filter(Server.id == server2_id).first()
         server1_url = f'http://{server1.ip_address}:{server1.port}/partner?partner_id={server2_id}'
         response = requests.request("PUT", server1_url)
         if response.ok:
@@ -167,19 +166,17 @@ def start_pair_servers(server1_id: int, server2_id: int, background_tasks: Backg
             response = requests.request("PUT", server2_url)
             if response.ok:
                 print("Updating partners")
-                server1.partner_id = server2.id
-                server2.partner_id = server1.id
-                print("Server 1 partner: " + str(server1.partner_id))
-                print("Server 2 partner: " + str(server2.partner_id))
-                db_session.commit()
-                print("Committing to database")
-                db_session.close()
+                server1.partner_id = int(server2_id)
+                server2.partner_id = int(server1_id)
+        print("Committing to database")
+        db_session.commit()
+        db_session.close()
 
         # transfer_inventory(server1_keys, 0, server1_id)
         # transfer_inventory(server2_keys, 0, server2_id)
 
-        # background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
-        # background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
+        background_tasks.add_task(transfer_inventory, server1_keys, 0, server1_id)
+        background_tasks.add_task(transfer_inventory, server2_keys, 0, server2_id)
         return {"Status": "Paired"}
     else:
         return {"Status": "Server(s) not found"}
