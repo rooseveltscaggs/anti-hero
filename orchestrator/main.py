@@ -530,7 +530,6 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 def reset():
     default_inv_dict = {
         Inventory.availability: "Available",
-        Inventory.is_dirty: False,
         Inventory.write_locked: False,
         Inventory.location: 0,
         Inventory.on_backup: False,

@@ -731,7 +731,6 @@ def get_item_status(item_id: int):
 def reset():
     default_dict = {
         Inventory.availability: "Available",
-        Inventory.is_dirty: False,
         Inventory.location: 0,
         Inventory.on_backup: False,
         Inventory.transaction_id: None

@@ -63,7 +63,7 @@ class Inventory(Base):
    committed = Column(Boolean(), primary_key=True, nullable=False, default=False)
    activated = Column(Boolean(), nullable=True, default=False)
    write_locked = Column(Boolean(), nullable=True, default=False)
-   # on_backup = Column(Boolean(), nullable=True, default=False)
+   on_backup = Column(Boolean(), nullable=True, default=False)
    # is_dirty = Column(Boolean(), nullable=True, default=False)
    # status_last_updated = Column(DateTime(), nullable=True)
    # last_write = Column(DateTime(), nullable=True)
