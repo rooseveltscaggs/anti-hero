@@ -423,7 +423,7 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
 
         curr_idx = (curr_idx+CHUNK_SIZE)
 
-    remaining_ids = list_difference(relinquished_ids, deactivated_ids)
+    remaining_ids = list_difference(deactivated_ids, relinquished_ids)
 
     print("sync_inventory - remaining_ids: " + str(remaining_ids))
     curr_idx = 0
