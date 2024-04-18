@@ -619,7 +619,7 @@ def simple_experiment(config_string=""):
     os.makedirs("experiments/" + experiment_name)
 
     worker_count = int(config_arr[7])
-    num_workers = min(int(mp.cpu_count() / 2), worker_count)
+    num_workers = min(int(mp.cpu_count()), worker_count)
     for i in range(1, num_workers+1):
         filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:12]}_worker_{i}.csv'
         process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, backup_url, delay, inv_arr, "None",))
