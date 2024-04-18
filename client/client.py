@@ -438,7 +438,7 @@ def simple_experiment_configurator():
     config_string += ("|" + end_time_value.isoformat()[:19])
 
     # Inventory Range to Request
-    print(f'Max. number of workers is {int(mp.cpu_count() / 2)}')
+    print(f'Max. number of workers is {int(mp.cpu_count())}')
     worker_count = input("Enter number of parallel workers to run: ")
     config_string += ("|" + worker_count)
 
