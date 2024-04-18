@@ -543,7 +543,8 @@ def reset():
 
     default_server_dict = {
         Server.in_failure: False,
-        Server.in_backup: False
+        Server.in_backup: False,
+        Server.partner_id: None
     }
 
     db_session.query(Inventory).update(default_inv_dict, synchronize_session = False)
