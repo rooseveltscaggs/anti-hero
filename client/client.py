@@ -447,7 +447,7 @@ def simple_experiment_configurator():
     config_string += ("|" + contact_backup)
     
     delay_decrease_string = input("Amount of second to decrease delay every 10 iterations: ")
-    config_string += ("|" + str(int(delay_decrease_string or 0)))
+    config_string += ("|" + str(float(delay_decrease_string or 0)))
 
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
@@ -642,7 +642,7 @@ def simple_experiment(config_string=""):
     start_time = datetime.datetime.fromisoformat(config_arr[5])
     stop_time = datetime.datetime.fromisoformat(config_arr[6])
 
-    delay_decrease = int(config_arr[9] or 0)
+    delay_decrease = float(config_arr[9] or 0)
     
     os.makedirs("experiments/" + experiment_name)
 
