@@ -311,28 +311,29 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
     # db_session.commit()
 
 
-    # Reopening DB connection closed by request_deactivation
-    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
-    backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
+    # # Reopening DB connection closed by request_deactivation
+    # failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    # backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
 
-    # Pair servers together
-    backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
-    backup_server_resp = requests.request("PUT", backup_server_url)
-    if backup_server_resp.ok:
-        failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
-        failed_server_resp = requests.request("PUT", failed_server_url)
-        if failed_server_resp.ok:
-            failed_server.partner_id = backup_server_id
-            backup_server.partner_id = failed_server_id
-            db_session.commit()
-            db_session.close()
+    # # Pair servers together
+    # backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
+    # backup_server_resp = requests.request("PUT", backup_server_url)
+    # if backup_server_resp.ok:
+    #     failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
+    #     failed_server_resp = requests.request("PUT", failed_server_url)
+    #     if failed_server_resp.ok:
+    #         failed_server.partner_id = backup_server_id
+    #         backup_server.partner_id = failed_server_id
+    #         db_session.commit()
+    #         db_session.close()
 
     
     # The deactivation step of transfer_inventory might be redundant for this case
     # as the failed partner has assumedly already deactivated all of its inventory
 
     # sync_inventory(relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
-    background_tasks.add_task(sync_inventory, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
+    background_tasks.add_task(post_recovery, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
+    # background_tasks.add_task(sync_inventory, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
     return {"Status": "Queued: Begin Operating"}
 
 def send_server_map(server_id):
@@ -370,6 +371,31 @@ def send_inventory(server_id):
         server.last_updated = datetime.utcnow()
     db_session.commit()
     db_session.close()
+
+
+def post_recovery(relinquished_ids, deactivated_ids, src_server_id, dest_server_id):
+    # Pair servers
+    pair_servers(dest_server_id, src_server_id)
+
+    # Sync inventory
+    sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server_id)
+
+
+def pair_servers(failed_server_id, backup_server_id):
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
+
+    # Pair servers together
+    backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
+    backup_server_resp = requests.request("PUT", backup_server_url)
+    if backup_server_resp.ok:
+        failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
+        failed_server_resp = requests.request("PUT", failed_server_url)
+        if failed_server_resp.ok:
+            failed_server.partner_id = backup_server_id
+            backup_server.partner_id = failed_server_id
+            db_session.commit()
+            db_session.close()
 
 # Relinquished IDs are the keys the previously failed node is requesting to regain
 # Deactivated IDs are all the keys successfully (deactivated)
