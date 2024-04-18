@@ -377,7 +377,7 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
     while curr_idx < len(relinquished_ids):
         chunk = relinquished_ids[curr_idx:curr_idx+CHUNK_SIZE]
         deactivated_ids = request_deactivation(src_server_id, chunk, True)
-        send_and_activate(dest_server.id, deactivated_ids)
+        send_and_activate(dest_server_id, deactivated_ids)
 
         curr_idx = (curr_idx+CHUNK_SIZE)
 
@@ -441,9 +441,9 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False, new_
     return deactivated_ids
 
 
-def send_and_activate(destination_server, inventory_ids):
+def send_and_activate(destination_server_id, inventory_ids):
     CHUNK_SIZE = 1000
-    curr_serv = db_session.query(Server).filter(Server.id == destination_server).first()
+    curr_serv = db_session.query(Server).filter(Server.id == destination_server_id).first()
     backup_serv = db_session.query(Server).filter(Server.id == curr_serv.partner_id).first()
 
     CURR_SERV_IP = curr_serv.ip_address
@@ -456,13 +456,13 @@ def send_and_activate(destination_server, inventory_ids):
     s_backup = requests.Session()
     curr_idx = 0
     # Setting inventory to new worker node location
-    db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server}, synchronize_session=False)
+    db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server_id}, synchronize_session=False)
     db_session.commit()
     db_session.close()
     while curr_idx < len(inventory_ids):
         backup_response = False
         chunk = inventory_ids[curr_idx:curr_idx+CHUNK_SIZE]
-        chunk_query = db_session.query(Inventory).filter(Inventory.id.in_(chunk), Inventory.location == destination_server)
+        chunk_query = db_session.query(Inventory).filter(Inventory.id.in_(chunk), Inventory.location == destination_server_id)
         chunk_data = chunk_query.all()
         chunk_data = [object.as_dict() for object in chunk_data]
         # if partner, send data chunk to backup (partner)
