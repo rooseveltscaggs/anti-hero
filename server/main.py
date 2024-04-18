@@ -181,8 +181,9 @@ def send_write_to_backup(model, data):
 
                 print("Returned data: " + str(json_data["data"]))
                 return json_data["data"]
-        except:
+        except Exception as error:
             # rollback changes tenative changes
+            print("An error occurred:", error)
             print("Exception occurred... deleting tentative commits")
             uncomitted_ids = [obj['id'] for obj in data]
             print("Uncommitted IDs: " + str(uncomitted_ids))
