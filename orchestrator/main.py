@@ -247,7 +247,7 @@ def report_failure(failed_server_id: int, backup_server_id: int):
             # Updating hashmap to reflect backup server inheriting failed node's keys
             # Only if this is the first time the node has requested authority
             if backup_server.partner_id:
-                db_session.query(Inventory).filter(Inventory.location == failed_server).update({ Inventory.location: backup_server_id }, synchronize_session=False)
+                db_session.query(Inventory).filter(Inventory.location == failed_server, Inventory.write_locked != True).update({ Inventory.location: backup_server_id }, synchronize_session=False)
 
             # Promoting/reverting (reporting) backup server to solo mode
             backup_server.partner_id = None
