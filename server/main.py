@@ -165,8 +165,8 @@ def send_write_to_backup(model, data):
             print("Sending data to prepare route...")
             response = requests.request("PUT", curr_url, headers={}, json = request_body, timeout=3)
             if response.ok:
-                json_data = response.json()
-                json_data = json_data['data']
+                json_payload = response.json()
+                json_data = json_payload['data']
                 print("Parsing successful response...")
                 print(data)
                 requested_ids = [obj['id'] for obj in data]
@@ -181,9 +181,7 @@ def send_write_to_backup(model, data):
                 print("Deleting non-accepted ids...")
                 db_session.commit()
                 print("Committing changes")
-
-                print("Returned data: " + str(json_data["data"]))
-                return json_data["data"]
+                return json_data
         except Exception as error:
             # rollback changes tenative changes
             print("An error occurred:", error)
