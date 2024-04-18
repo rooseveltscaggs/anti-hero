@@ -495,14 +495,15 @@ def send_and_activate(destination_server_id, inventory_ids):
 
     CURR_SERV_IP = curr_serv.ip_address
     CURR_SERV_PORT = curr_serv.port
+    s_backup = None
 
     # This is None if curr_serv has no partner
     if backup_serv:
         BACK_SERV_IP = backup_serv.ip_address
         BACK_SERV_PORT = backup_serv.port
+        s_backup = requests.Session()
 
     s_current = requests.Session()
-    s_backup = requests.Session()
     curr_idx = 0
     # Setting inventory to new worker node location
     db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server_id}, synchronize_session=False)
