@@ -167,9 +167,11 @@ def send_write_to_backup(model, data):
             if response.ok:
                 json_data = response.json()
                 print("Parsing successful response...")
+                print(data)
                 requested_ids = [obj['id'] for obj in data]
-                accepted_ids = [obj['id'] for obj in json_data]
                 print("Requested IDs: " + str(requested_ids))
+                print(json_data)
+                accepted_ids = [obj['id'] for obj in json_data]
                 print("Accepted IDs: " + str(accepted_ids))
                 # Removing tentative commits not accepted by backup
                 nonaccepted_ids = list_difference(requested_ids, accepted_ids)
