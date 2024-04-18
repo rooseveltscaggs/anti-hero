@@ -615,7 +615,7 @@ def buy_inventory(ids: List[int], background_tasks: BackgroundTasks):
             return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
         
         uncomitted_ids = [obj['id'] for obj in sent_data]
-        commits_applied = apply_to_primary(Inventory, Inventory.id.in_(uncomitted_ids))
+        commits_applied = apply_to_primary(Inventory, (Inventory.id.in_(uncomitted_ids),))
         if not commits_applied:
             bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to reach agreement with partner"}
             return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
@@ -626,7 +626,7 @@ def buy_inventory(ids: List[int], background_tasks: BackgroundTasks):
         try:
             tentative_data = write_to_primary(Inventory, (Inventory.id.in_(ids), Inventory.availability == 'Available', Inventory.location == server_id), { 'transaction_id': transaction_id, 'availability': 'Reserved' })
             uncomitted_ids = [obj['id'] for obj in tentative_data]
-            commits_applied = apply_to_primary(Inventory, Inventory.id.in_(uncomitted_ids))
+            commits_applied = apply_to_primary(Inventory, (Inventory.id.in_(uncomitted_ids),))
             if not commits_applied:
                 bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to commit to local server"}
                 return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
@@ -666,7 +666,7 @@ async def submit_payment_details(request: Request, background_tasks: BackgroundT
             return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
         
         uncomitted_ids = [obj['id'] for obj in sent_data]
-        commits_applied = apply_to_primary(Inventory, Inventory.id.in_(uncomitted_ids))
+        commits_applied = apply_to_primary(Inventory, (Inventory.id.in_(uncomitted_ids),))
         if not commits_applied:
             bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to reach agreement with partner"}
             return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
@@ -676,7 +676,7 @@ async def submit_payment_details(request: Request, background_tasks: BackgroundT
         try:
             tentative_data = write_to_primary(Inventory, (Inventory.availability == "Reserved", Inventory.transaction_id == transaction_id), {"availability": "Purchased"})
             uncomitted_ids = [obj['id'] for obj in tentative_data]
-            commits_applied = apply_to_primary(Inventory, Inventory.id.in_(uncomitted_ids))
+            commits_applied = apply_to_primary(Inventory, (Inventory.id.in_(uncomitted_ids),))
             if not commits_applied:
                 bad_resp = {"Status": "Failed", "Transaction_ID": transaction_id, "Reason": "Unable to commit to local server"}
                 return JSONResponse(status_code=status.HTTP_502_BAD_GATEWAY, content=bad_resp)
