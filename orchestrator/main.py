@@ -274,6 +274,7 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
     json_data = await request.json()
     
     relinquished_ids = json_data["relinquished_ids"]
+    print("Relinquished keys from failed server: " + str(relinquished_ids))
     failed_server_id = json_data["server_id"]
 
     failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
@@ -303,7 +304,9 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
     # (Silently) deactivate data on previous partner
     backup_records = db_session.query(Inventory.id).filter(Inventory.location == backup_server_id).all()
     backup_keys = [obj[0] for obj in backup_records]
+    print("Requesting deactivation for keys: " + str(backup_keys))
     deactivated_keys = request_deactivation(backup_server_id, backup_keys, False)
+    print("Silent deactivated keys: " + str(deactivated_keys))
 
 
     # Temporarily mark successfully deactivated keys as belonging to Orchestrator (location = 0)
@@ -401,6 +404,10 @@ def pair_servers(failed_server_id, backup_server_id):
 # Deactivated IDs are all the keys successfully (deactivated)
 # The remaining deactivated keys are ones to be assigned to the src_server
 def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server_id):
+    print("sync_inventory - relinquished_ids: " + str(relinquished_ids))
+    print("sync_inventory - deactivated_ids: " + str(deactivated_ids))
+    print("sync_inventory - src_server_id: " + str(src_server_id))
+    print("sync_inventory - dest_server_id: " + str(dest_server_id))
     # Node that didn't fail
     src_server = db_session.query(Server).filter(Server.id == src_server_id).first()
     # Node that previously failed

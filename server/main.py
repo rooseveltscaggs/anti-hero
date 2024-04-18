@@ -525,6 +525,8 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
     # Locking mechanism is for buy transaction -- so in progress transactions can continue
     # In order to deactivate inventory, inventory must not be write locked or marked dirty on either the primary or the backup
     # In other words, the data must not have been touched by either OR it must have been synchronized after a write
+    print("Attempting to deactivate...")
+    print(ids)
     db_session.query(Inventory).filter(Inventory.id.in_(ids)).update({Inventory.location: new_location, Inventory.activated: False}, synchronize_session = False)
     db_session.commit()
     db_session.close()
