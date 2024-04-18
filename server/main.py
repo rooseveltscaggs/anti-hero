@@ -133,7 +133,7 @@ def write_to_backup(model, data):
     return new_objs
 
 def send_write_to_backup(model, data):
-    route_slug = f'/{model.__qualname__}/prepare'
+    route_slug = f'/{model.__qualname__.lower()}/prepare'
     # Send data to specific route on backup (if not in backup mode)
     # server_id = retrieve_registry("Server_ID", -1)
     partner_id = retrieve_registry("Partner_ID", 0)
@@ -208,7 +208,7 @@ def apply_to_backup(model, ids):
 
 def send_apply_to_backup(model, ids):
     # Send apply/commit command to backup (if not in backup mode and has backup)
-    route_slug = f'/{model.__qualname__}/apply'
+    route_slug = f'/{model.__qualname__.lower()}/apply'
     # Send data to specific route on backup (if not in backup mode)
     # server_id = retrieve_registry("Server_ID", -1)
     partner_id = retrieve_registry("Partner_ID", 0)
