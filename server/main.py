@@ -166,6 +166,7 @@ def send_write_to_backup(model, data):
             response = requests.request("PUT", curr_url, headers={}, json = request_body, timeout=3)
             if response.ok:
                 json_data = response.json()
+                json_data = json_data['data']
                 print("Parsing successful response...")
                 print(data)
                 requested_ids = [obj['id'] for obj in data]
