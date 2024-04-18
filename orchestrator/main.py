@@ -244,8 +244,14 @@ def report_failure(failed_server_id: int, backup_server_id: int):
             # failed_server.in_failure = True
             # backup_server.in_backup = True
 
+            # Updating hashmap to reflect backup server inheriting failed node's keys
+            # Only if this is the first time the node has requested authority
+            if backup_server.partner_id:
+                db_session.query(Inventory).filter(Inventory.location == failed_server).update({ Inventory.location: backup_server_id }, synchronize_session=False)
+
             # Promoting/reverting (reporting) backup server to solo mode
             backup_server.partner_id = None
+
             db_session.commit()
             db_session.close()
             return {"Status": "Granted"}
