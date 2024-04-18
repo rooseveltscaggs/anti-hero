@@ -425,10 +425,13 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
 
     remaining_ids = list_difference(relinquished_ids, deactivated_ids)
 
+    print("sync_inventory - remaining_ids: " + str(remaining_ids))
     curr_idx = 0
     while curr_idx < len(remaining_ids):
         chunk = remaining_ids[curr_idx:curr_idx+CHUNK_SIZE]
+        print("Requesting deactivation of chunk to be sent to backup node")
         deactivated_ids_chunk = request_deactivation(src_server_id, chunk, True)
+        print("sync_inventory - deactivated_ids_chunk: " + str(deactivated_ids_chunk))
         send_and_activate(src_server_id, deactivated_ids_chunk)
 
         curr_idx = (curr_idx+CHUNK_SIZE)
