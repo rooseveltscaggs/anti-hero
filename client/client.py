@@ -445,6 +445,9 @@ def simple_experiment_configurator():
     # Inventory Range to Request
     contact_backup = input("Contact backup on bad response? (y/n): ")
     config_string += ("|" + contact_backup)
+    
+    delay_decrease_string = input("Amount of second to decrease delay every 10 iterations: ")
+    config_string += ("|" + str(int(delay_decrease_string or 0)))
 
     print("\nGenerated config string: ")
     print(str("\n" + config_string))
@@ -529,7 +532,7 @@ def simple_experiment_configurator():
 # retry_count = -1, 0, 1+
 # If count == 0, continue to next request
 def simple_requests(filepath, start_time, stop_time, server_url, 
-                    backup_url, delay, inv_array, descriptor="None"):
+                    backup_url, delay, inv_array, descriptor="None", delay_decrease_factor=0):
     with open(filepath, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Request Sent', 'Response Received', 'Response', 'Order', 'Endpoint', 'InventoryID', 'Descriptor'])
@@ -539,6 +542,7 @@ def simple_requests(filepath, start_time, stop_time, server_url,
 
         shuffled_array = inv_array.copy()
         random.shuffle(shuffled_array)
+        curr_delay = delay
 
         print("Waiting for experiment start time...")
         while start_time > datetime.datetime.utcnow():
@@ -598,17 +602,19 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                     # print(f"Error: {e}")
                     csv_writer.writerow([request_datetime, "N/A", 'Failure', 'Backup', curr_url, inv_id, e])
             i += 1
-            time.sleep(delay)
+            if (i % 10 == 0):
+                curr_delay = max(0, curr_delay-delay_decrease_factor)
+            time.sleep(curr_delay)
 
 
 
 def simple_experiment(config_string=""):
     config_arr = config_string.split("|")
     while True:
-        if len(config_arr) != 9:
+        if len(config_arr) != 10:
             config_string = input("Enter the configuration string for this experiment: ")
             config_arr = config_string.split("|")
-        if len(config_arr) == 9:
+        if len(config_arr) == 10:
             break
         else:
             print("Invalid configuration string: wrong number of args")
@@ -635,6 +641,8 @@ def simple_experiment(config_string=""):
 
     start_time = datetime.datetime.fromisoformat(config_arr[5])
     stop_time = datetime.datetime.fromisoformat(config_arr[6])
+
+    delay_decrease = int(config_arr[9] or 0)
     
     os.makedirs("experiments/" + experiment_name)
 
@@ -642,7 +650,7 @@ def simple_experiment(config_string=""):
     num_workers = min(int(mp.cpu_count()), worker_count)
     for i in range(1, num_workers+1):
         filepath = "experiments/" + experiment_name + "/" + f'{experiment_name[:12]}_worker_{i}.csv'
-        process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, backup_url, delay, inv_arr, "None",))
+        process = Process(target=simple_requests, args=(filepath, start_time, stop_time, server_url, backup_url, delay, inv_arr, "None", delay_decrease))
         process.start()
         if i == num_workers:
             print("Workers started, running experiment...")
