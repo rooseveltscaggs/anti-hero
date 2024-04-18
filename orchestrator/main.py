@@ -385,8 +385,8 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
     curr_idx = 0
     while curr_idx < len(relinquished_ids):
         chunk = relinquished_ids[curr_idx:curr_idx+CHUNK_SIZE]
-        deactivated_ids = request_deactivation(src_server_id, chunk, True)
-        send_and_activate(dest_server_id, deactivated_ids)
+        deactivated_ids_chunk = request_deactivation(src_server_id, chunk, True)
+        send_and_activate(dest_server_id, deactivated_ids_chunk)
 
         curr_idx = (curr_idx+CHUNK_SIZE)
 
@@ -395,8 +395,8 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
     curr_idx = 0
     while curr_idx < len(remaining_ids):
         chunk = remaining_ids[curr_idx:curr_idx+CHUNK_SIZE]
-        deactivated_ids = request_deactivation(src_server_id, chunk, True)
-        send_and_activate(src_server_id, deactivated_ids)
+        deactivated_ids_chunk = request_deactivation(src_server_id, chunk, True)
+        send_and_activate(src_server_id, deactivated_ids_chunk)
 
         curr_idx = (curr_idx+CHUNK_SIZE)
     db_session.close()
