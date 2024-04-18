@@ -305,6 +305,9 @@ async def initiate_recovery(request: Request, background_tasks: BackgroundTasks)
     # db_session.commit()
 
 
+    # Reopening DB connection closed by request_deactivation
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
 
     # Pair servers together
     backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
@@ -443,14 +446,18 @@ def request_deactivation(server_id, inventory_ids, write_to_database=False, new_
 
 def send_and_activate(destination_server_id, inventory_ids):
     CHUNK_SIZE = 1000
+    BACK_SERV_IP = ""
+    BACK_SERV_PORT = ""
     curr_serv = db_session.query(Server).filter(Server.id == destination_server_id).first()
     backup_serv = db_session.query(Server).filter(Server.id == curr_serv.partner_id).first()
 
     CURR_SERV_IP = curr_serv.ip_address
     CURR_SERV_PORT = curr_serv.port
 
-    BACK_SERV_IP = backup_serv.ip_address
-    BACK_SERV_PORT = backup_serv.port
+    # This is None if curr_serv has no partner
+    if backup_serv:
+        BACK_SERV_IP = backup_serv.ip_address
+        BACK_SERV_PORT = backup_serv.port
 
     s_current = requests.Session()
     s_backup = requests.Session()
@@ -466,7 +473,8 @@ def send_and_activate(destination_server_id, inventory_ids):
         chunk_data = chunk_query.all()
         chunk_data = [object.as_dict() for object in chunk_data]
         # if partner, send data chunk to backup (partner)
-        if backup_serv:
+        # Backup_serv is not transient (db close is above this)
+        if BACK_SERV_IP:
             back_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/update'
             upd_response = s_backup.put(back_url, json = chunk_data)
             # upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
