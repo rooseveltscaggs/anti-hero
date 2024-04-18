@@ -537,23 +537,35 @@ def simple_requests(filepath, start_time, stop_time, server_url,
         if backup_url is not None:
             can_request_backup = True
 
+        shuffled_array = inv_array.copy()
+        random.shuffle(shuffled_array)
+
         print("Waiting for experiment start time...")
         while start_time > datetime.datetime.utcnow():
             time.sleep(1)
 
         print("Beginning experiment...")
-        while stop_time > datetime.datetime.utcnow():
+        i = 0
+        while stop_time > datetime.datetime.utcnow() and i < len(shuffled_array):
             bad_resp = False
             # -1: no backup, 0: no backup, 1: backup
             # Choose inventory ID from range array (random or linear)
-            inv_id = random.choice(inv_array)
-            # Build URL (based on endpoint + inventory ID)
-            curr_url = server_url + "/" + str(inv_id)
+            # inv_id = random.choice(inv_array)
+            inv_id = shuffled_array[i]
             # Send request
             try:
-                request_datetime = str(datetime.datetime.utcnow())
-                response = requests.get(curr_url, timeout=3)
-                response_datetime = str(datetime.datetime.utcnow())
+                # Build URL (based on endpoint + inventory ID)
+                if "/buy/reserve" in server_url:
+                    curr_url = server_url
+                    request_datetime = str(datetime.datetime.utcnow())
+                    # response = requests.post(curr_url, timeout=3)
+                    response = requests.request("POST", curr_url, json=[inv_id], timeout=3)
+                    response_datetime = str(datetime.datetime.utcnow())
+                else:
+                    curr_url = server_url + "/" + str(inv_id)
+                    request_datetime = str(datetime.datetime.utcnow())
+                    response = requests.get(curr_url, timeout=3)
+                    response_datetime = str(datetime.datetime.utcnow())
                 if response.ok:
                     csv_writer.writerow([request_datetime, response_datetime, 'Success', 'Primary', curr_url, inv_id, descriptor])
                 else:
@@ -567,10 +579,17 @@ def simple_requests(filepath, start_time, stop_time, server_url,
             if bad_resp and can_request_backup:
                 # send request to backup and record
                 try:
-                    curr_url = backup_url + "/" + str(inv_id)
-                    request_datetime = str(datetime.datetime.utcnow())
-                    response = requests.get(curr_url, timeout=3)
-                    response_datetime = str(datetime.datetime.utcnow())
+                    if "/buy/reserve" in backup_url:
+                        curr_url = backup_url
+                        request_datetime = str(datetime.datetime.utcnow())
+                        # response = requests.post(curr_url, timeout=3)
+                        response = requests.request("POST", curr_url, json=[inv_id], timeout=3)
+                        response_datetime = str(datetime.datetime.utcnow())
+                    else:
+                        curr_url = backup_url + "/" + str(inv_id)
+                        request_datetime = str(datetime.datetime.utcnow())
+                        response = requests.get(curr_url, timeout=3)
+                        response_datetime = str(datetime.datetime.utcnow())
                     if response.ok:
                         csv_writer.writerow([request_datetime, response_datetime, 'Success', 'Backup', curr_url, inv_id, descriptor])
                     else:
@@ -578,6 +597,7 @@ def simple_requests(filepath, start_time, stop_time, server_url,
                 except requests.exceptions.RequestException as e:
                     # print(f"Error: {e}")
                     csv_writer.writerow([request_datetime, "N/A", 'Failure', 'Backup', curr_url, inv_id, e])
+            i += 1
             time.sleep(delay)
 
 
@@ -593,7 +613,7 @@ def simple_experiment(config_string=""):
         else:
             print("Invalid configuration string: wrong number of args")
     
-    SLUGS_ARR = ['/latency', '/inventory', '/inventory/buy']
+    SLUGS_ARR = ['/latency', '/inventory', '/inventory/buy/reserve']
 
     experiment_name = config_arr[0]
 
