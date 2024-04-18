@@ -162,24 +162,34 @@ def send_write_to_backup(model, data):
             "data": data
         }
         try:
+            print("Sending data to prepare route...")
             response = requests.request("PUT", curr_url, headers={}, json = request_body, timeout=3)
             if response.ok:
                 json_data = response.json()
-
+                print("Parsing successful response...")
                 requested_ids = [obj['id'] for obj in data]
                 accepted_ids = [obj['id'] for obj in json_data]
-
+                print("Requested IDs: " + str(requested_ids))
+                print("Accepted IDs: " + str(accepted_ids))
                 # Removing tentative commits not accepted by backup
                 nonaccepted_ids = list_difference(requested_ids, accepted_ids)
+                print("Non-Accepted IDs: " + str(nonaccepted_ids))
                 db_session.query(model).filter(model.id.in_(nonaccepted_ids), model.committed == False, model.activated == True).delete(synchronize_session=False)
+                print("Deleting non-accepted ids...")
                 db_session.commit()
+                print("Committing changes")
 
+                print("Returned data: " + str(json_data["data"]))
                 return json_data["data"]
         except:
             # rollback changes tenative changes
+            print("Exception occurred... deleting tentative commits")
             uncomitted_ids = [obj['id'] for obj in data]
+            print("Uncommitted IDs: " + str(uncomitted_ids))
             db_session.query(model).filter(model.id.in_(uncomitted_ids), model.committed == False, model.activated == True).delete(synchronize_session=False)
+            print("Deleting non-accepted ids...")
             db_session.commit()
+            print("Committing changes")
             return []
     else:
         return data
