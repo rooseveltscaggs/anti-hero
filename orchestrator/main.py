@@ -377,7 +377,7 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
     while curr_idx < len(relinquished_ids):
         chunk = relinquished_ids[curr_idx:curr_idx+CHUNK_SIZE]
         deactivated_ids = request_deactivation(src_server_id, chunk, True)
-        send_and_activate(dest_server, deactivated_ids)
+        send_and_activate(dest_server.id, deactivated_ids)
 
         curr_idx = (curr_idx+CHUNK_SIZE)
 
