@@ -1,6 +1,6 @@
 from operator import or_
 from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
 from datetime import datetime, timedelta
@@ -722,6 +722,12 @@ def get_item_status(item_id: int):
     inventory = db_session.query(Inventory).filter(Inventory.id == item_id, 
                                                    Inventory.location == server_id,
                                                    Inventory.activated == True).first()
+    dirty_inventory = db_session.query(Inventory).filter(Inventory.id == item_id, Inventory.location != server_id).first()
+    if dirty_inventory:
+        ext_server = db_session.query(Server).filter(Server.id == dirty_inventory.location).first()
+        url_slug = f'http://{ext_server.ip_address}:{ext_server.port}/inventory/{item_id}'
+        response = RedirectResponse(url=url_slug)
+        return response
     if not inventory:
         raise HTTPException(status_code=404, detail="Item not found")
     return inventory
