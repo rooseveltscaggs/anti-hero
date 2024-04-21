@@ -484,7 +484,7 @@ async def update_all_inventory(request: Request):
         for key in item.keys():
             setattr(inv_obj, key, item[key])
         # Do I need to commit here ?
-        db_session.commit() 
+    db_session.commit() 
     db_session.close()
     print("Inventory updated/created!")
     return {"Status": "Updated"} 
