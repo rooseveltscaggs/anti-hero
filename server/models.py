@@ -73,7 +73,6 @@ class Inventory(Base):
    def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
       self_dict["last_modified_date"] = None if not self.last_modified_date else self.last_modified_date.isoformat()
-      datetime.utcnow() if not last_modified else last_modified
       return self_dict
    
    def copy(self, new_object):
