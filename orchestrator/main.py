@@ -541,12 +541,10 @@ def transfer_inventory(inventory_ids, current_location, new_location):
         print("Requesting deactivation of inventory...")
         # If partner, send (non-writing) deactivation request to partner
         if curr_partner_id:
-            deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, True)
-        else:
-            deactivated_ids_partner = inventory_ids
+            deactivated_ids_partner = request_deactivation(curr_partner_id, inventory_ids, False)
         
         # Then send (writing) deactivation request to main node
-        deactivated_ids_primary = request_deactivation(current_location, inventory_ids, False)
+        deactivated_ids_primary = request_deactivation(current_location, inventory_ids, True)
 
         deactivated_ids = common_elements(deactivated_ids_partner, deactivated_ids_primary)
     else:
