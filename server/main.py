@@ -522,7 +522,7 @@ def retrieve_orchestrator_servers():
 def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: int = 0):
     return_dict = {"Status": "Deactivated"}
     # transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
-    # server_id = retrieve_registry("Server_ID", None)
+    server_id = retrieve_registry("Server_ID", None)
     # partner_id = retrieve_registry("Partner_ID", None)
     # reserved_ids = []
 
@@ -531,7 +531,7 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
     # In other words, the data must not have been touched by either OR it must have been synchronized after a write
     print("Attempting to deactivate...")
     print(ids)
-    db_session.query(Inventory).filter(Inventory.id.in_(ids)).update({Inventory.location: new_location, Inventory.activated: False}, synchronize_session = False)
+    db_session.query(Inventory).filter(Inventory.id.in_(ids), ((Inventory.location == 0) | (Inventory.location == server_id))).update({Inventory.location: new_location, Inventory.activated: False}, synchronize_session = False)
     db_session.commit()
     db_session.close()
 
