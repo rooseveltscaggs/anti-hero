@@ -552,7 +552,7 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
         # return list of inventory ids that haven't been changed since the last heartbeat was received
         unchanged_deactivated_data = db_session.query(Inventory.id).filter(Inventory.location == new_location, 
                                                                            Inventory.id.in_(ids),
-                                                                          (Inventory.last_modified_date < last_heartbeat | Inventory.last_modified_date == None)).all()
+                                                                          ((Inventory.last_modified_date < last_heartbeat) | (Inventory.last_modified_date == None))).all()
         deactivated_inventory = [record[0] for record in deactivated_inventory]
         unchanged_deactivated_data = [record[0] for record in unchanged_deactivated_data]
         return_dict["unchanged_deactivated_data"] = unchanged_deactivated_data
