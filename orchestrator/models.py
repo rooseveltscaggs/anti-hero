@@ -37,11 +37,13 @@ class Server(Base):
     partner_id = Column(Integer(), nullable=True)
     in_backup = Column(Boolean(), nullable=True)
     in_failure = Column(Boolean(), nullable=True)
+    timeout_reported = Column(DateTime(), nullable=True)
     description = Column(String(), nullable=True)
 
     def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
       self_dict["last_updated"] = None if not self.last_updated else self.last_updated.isoformat()
+      self_dict["timeout_reported"] = None if not self.timeout_reported else self.timeout_reported.isoformat()
       return self_dict
 
 class Inventory(Base):
@@ -64,13 +66,14 @@ class Inventory(Base):
    activated = Column(Boolean(), nullable=True, default=False)
    write_locked = Column(Boolean(), nullable=True, default=False)
    on_backup = Column(Boolean(), nullable=True, default=False)
+   last_modified_date = Column(DateTime(), nullable=True)
    # is_dirty = Column(Boolean(), nullable=True, default=False)
    # status_last_updated = Column(DateTime(), nullable=True)
    # last_write = Column(DateTime(), nullable=True)
 
    def as_dict(self):
       self_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-      # self_dict["status_last_updated"] = None if not self.status_last_updated else self.status_last_updated.isoformat()
+      self_dict["last_modified_date"] = None if not self.last_modified_date else self.last_modified_date.isoformat()
       return self_dict
    
    def copy(self, new_object):

@@ -263,81 +263,6 @@ def report_failure(failed_server_id: int, backup_server_id: int):
     bad_resp = {"Status": "Denied", "Reason": "Conditions not met for authority grant"}
     db_session.close()
     return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=bad_resp)
-           
-
-@app.put("/initiate-recovery")
-async def initiate_recovery(request: Request, background_tasks: BackgroundTasks):
-    # Receiving this request means the failed node is acknowledging
-    # its failure and has already relinquished its old local data
-    # Therefore, we can now safely mark it as being in Solo Mode
-    print("Recovery request received...")
-    json_data = await request.json()
-    
-    relinquished_ids = json_data["relinquished_ids"]
-    print("Relinquished keys from failed server: " + str(relinquished_ids))
-    failed_server_id = json_data["server_id"]
-
-    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
-    backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
-
-    failed_server_id = failed_server.id
-    backup_server_id = backup_server.id
-
-    # Set previously failed node to Solo Mode
-    failed_server.partner_id = None
-    db_session.commit()
-
-    db_session.refresh(failed_server)
-    db_session.refresh(backup_server)
-
-    # If previous partner has already been re-matched, allow previously failed node to simply operate in Solo Mode
-    if backup_server.partner_id:
-        # Officially return failed_server to solo mode
-        # failed_server.partner_id = None
-        # db_session.commit()
-        # db_session.close()
-        return {"Status": "Previous Partner Unavailable: Begin Operating in Solo Mode"}
-
-    
-    # If previous partner is in Solo Mode (aka can be re-paired with failed node)
-
-    # (Silently) deactivate data on previous partner
-    backup_records = db_session.query(Inventory.id).filter(Inventory.location == backup_server_id).all()
-    backup_keys = [obj[0] for obj in backup_records]
-    print("Requesting deactivation for keys: " + str(backup_keys))
-    deactivated_keys = request_deactivation(backup_server_id, backup_keys, False)
-    print("Silent deactivated keys: " + str(deactivated_keys))
-
-
-    # Temporarily mark successfully deactivated keys as belonging to Orchestrator (location = 0)
-    # db_session.query(Inventory).filter(Inventory.id.in_(deactivated_keys)).update({ Inventory.location: 0 }, synchronize_session=False)
-    # db_session.commit()
-
-
-    # # Reopening DB connection closed by request_deactivation
-    # failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
-    # backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
-
-    # # Pair servers together
-    # backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
-    # backup_server_resp = requests.request("PUT", backup_server_url)
-    # if backup_server_resp.ok:
-    #     failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
-    #     failed_server_resp = requests.request("PUT", failed_server_url)
-    #     if failed_server_resp.ok:
-    #         failed_server.partner_id = backup_server_id
-    #         backup_server.partner_id = failed_server_id
-    #         db_session.commit()
-    #         db_session.close()
-
-    
-    # The deactivation step of transfer_inventory might be redundant for this case
-    # as the failed partner has assumedly already deactivated all of its inventory
-
-    # sync_inventory(relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
-    background_tasks.add_task(post_recovery, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
-    # background_tasks.add_task(sync_inventory, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
-    return {"Status": "Queued: Begin Operating"}
 
 def send_server_map(server_id):
     server = db_session.query(Server).filter(Server.id == server_id).first()
@@ -376,12 +301,22 @@ def send_inventory(server_id):
     db_session.close()
 
 
-def post_recovery(relinquished_ids, deactivated_ids, src_server_id, dest_server_id):
+def post_recovery(relinquished_ids, deactivated_ids, unchanged_deactivated_ids, src_server_id, dest_server_id):
     # Pair servers
     pair_servers(dest_server_id, src_server_id)
 
+
+    # Optimized reactivation: Reactivate keys that haven't been changed since the timeout
+    unchanged_relinquished_ids = common_elements(unchanged_deactivated_ids, relinquished_ids)
+    unchanged_remaining_ids = list_difference(deactivated_ids, unchanged_relinquished_ids)
+
+    reactivate_clean_data(src_server_id, dest_server_id, dest_server_id, unchanged_relinquished_ids)
+    reactivate_clean_data(src_server_id, dest_server_id, src_server_id, unchanged_remaining_ids)
+    remaining_ids = list_difference(deactivated_ids, unchanged_deactivated_ids)
+    remaining_relinquished_ids = list_difference(relinquished_ids, unchanged_relinquished_ids)
+
     # Sync inventory
-    sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server_id)
+    sync_inventory(remaining_relinquished_ids, remaining_ids, src_server_id, dest_server_id)
 
 
 def pair_servers(failed_server_id, backup_server_id):
@@ -399,6 +334,33 @@ def pair_servers(failed_server_id, backup_server_id):
             backup_server.partner_id = failed_server_id
             db_session.commit()
             db_session.close()
+            
+
+# Relinquished IDs are the keys the previously failed node is requesting to regain
+# Deactivated IDs are all the keys successfully (deactivated)
+# The remaining deactivated keys are ones to be assigned to the src_server
+def reactivate_clean_data(src_server_id, dest_server_id, new_location, unchanged_deactivated_data=None):
+    if not unchanged_deactivated_data:
+        return None
+    # Node that didn't fail
+    src_server = db_session.query(Server).filter(Server.id == src_server_id).first()
+    # timeout_reported = src_server.timeout_reported
+
+    # Node that previously failed
+    dest_server = db_session.query(Server).filter(Server.id == dest_server_id).first()
+    
+    
+    CHUNK_SIZE = 1000
+
+    curr_idx = 0
+    while curr_idx < len(unchanged_deactivated_data):
+        chunk = unchanged_deactivated_data[curr_idx:curr_idx+CHUNK_SIZE]
+        src_url = f'http://{src_server.ip_address}:{src_server.port}/inventory/activate?new_location={new_location}'
+        dest_url = f'http://{dest_server.ip_address}:{dest_server.port}/inventory/activate?new_location={new_location}'
+        # active_resp = s_backup.put(curr_url, json = chunk)
+        src_resp = requests.request("PUT", src_url, headers={}, json = chunk)
+        dest_resp = requests.request("PUT", dest_url, headers={}, json = chunk)
+        curr_idx = (curr_idx+CHUNK_SIZE)
 
 # Relinquished IDs are the keys the previously failed node is requesting to regain
 # Deactivated IDs are all the keys successfully (deactivated)
@@ -408,10 +370,12 @@ def sync_inventory(relinquished_ids, deactivated_ids, src_server_id, dest_server
     print("sync_inventory - deactivated_ids: " + str(deactivated_ids))
     print("sync_inventory - src_server_id: " + str(src_server_id))
     print("sync_inventory - dest_server_id: " + str(dest_server_id))
+
     # Node that didn't fail
-    src_server = db_session.query(Server).filter(Server.id == src_server_id).first()
+    # src_server = db_session.query(Server).filter(Server.id == src_server_id).first()
+
     # Node that previously failed
-    dest_server = db_session.query(Server).filter(Server.id == dest_server_id).first()
+    # dest_server = db_session.query(Server).filter(Server.id == dest_server_id).first()
     
     CHUNK_SIZE = 1000
 
@@ -446,6 +410,19 @@ def reserve_orchestrator_inventory(inventory_ids, new_location):
                                         Inventory.write_locked != True).update({Inventory.write_locked: True, Inventory.last_modified_by: transaction_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
+
+def request_deactivation_detailed(server_id, inventory_ids, new_location=0):
+    # curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
+    curr_serv = db_session.query(Server).filter(Server.id == server_id).first()
+    CURR_SERV_IP = curr_serv.ip_address
+    CURR_SERV_PORT = curr_serv.port
+    curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/deactivate?new_location={new_location}'
+    response = requests.request("PUT", curr_url, headers={}, json = inventory_ids)
+    if response.ok:
+        # If the response status code is 200 (OK), parse the response as JSON
+        json_data = response.json()
+        return json_data
+    return None
 
 def request_deactivation(server_id, inventory_ids, write_to_database=False, new_location=0):
     # curr_serv = db_session.query(Server).filter(Server.id == current_location).first()
@@ -581,6 +558,82 @@ def transfer_inventory(inventory_ids, current_location, new_location):
 #     backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
 
 #     # First step is to attempt
+
+@app.put("/initiate-recovery")
+async def initiate_recovery(request: Request, background_tasks: BackgroundTasks):
+    # Receiving this request means the failed node is acknowledging
+    # its failure and has already relinquished its old local data
+    # Therefore, we can now safely mark it as being in Solo Mode
+    print("Recovery request received...")
+    json_data = await request.json()
+    
+    relinquished_ids = json_data["relinquished_ids"]
+    print("Relinquished keys from failed server: " + str(relinquished_ids))
+    failed_server_id = json_data["server_id"]
+
+    failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    backup_server = db_session.query(Server).filter(Server.id == failed_server.partner_id).first()
+
+    failed_server_id = failed_server.id
+    backup_server_id = backup_server.id
+
+    # Set previously failed node to Solo Mode
+    failed_server.partner_id = None
+    db_session.commit()
+
+    db_session.refresh(failed_server)
+    db_session.refresh(backup_server)
+
+    # If previous partner has already been re-matched, allow previously failed node to simply operate in Solo Mode
+    if backup_server.partner_id:
+        # Officially return failed_server to solo mode
+        # failed_server.partner_id = None
+        # db_session.commit()
+        # db_session.close()
+        return {"Status": "Previous Partner Unavailable: Begin Operating in Solo Mode"}
+
+    
+    # If previous partner is in Solo Mode (aka can be re-paired with failed node)
+
+    # (Silently) deactivate data on previous partner
+    backup_records = db_session.query(Inventory.id).filter(Inventory.location == backup_server_id).all()
+    backup_keys = [obj[0] for obj in backup_records]
+    print("Requesting deactivation for keys: " + str(backup_keys))
+    deactivation_data = request_deactivation_detailed(backup_server_id, backup_keys)
+    unchanged_deactivated_data = deactivation_data["unchanged_deactivated_data"]
+    deactivated_keys = deactivation_data["deactivated_inventory"]
+    print("Silent deactivated keys: " + str(deactivated_keys))
+
+
+    # Temporarily mark successfully deactivated keys as belonging to Orchestrator (location = 0)
+    # db_session.query(Inventory).filter(Inventory.id.in_(deactivated_keys)).update({ Inventory.location: 0 }, synchronize_session=False)
+    # db_session.commit()
+
+
+    # # Reopening DB connection closed by request_deactivation
+    # failed_server = db_session.query(Server).filter(Server.id == failed_server_id).first()
+    # backup_server = db_session.query(Server).filter(Server.id == backup_server_id).first()
+
+    # # Pair servers together
+    # backup_server_url = f'http://{backup_server.ip_address}:{backup_server.port}/partner?partner_id={failed_server_id}'
+    # backup_server_resp = requests.request("PUT", backup_server_url)
+    # if backup_server_resp.ok:
+    #     failed_server_url = f'http://{failed_server.ip_address}:{failed_server.port}/partner?partner_id={backup_server_id}'
+    #     failed_server_resp = requests.request("PUT", failed_server_url)
+    #     if failed_server_resp.ok:
+    #         failed_server.partner_id = backup_server_id
+    #         backup_server.partner_id = failed_server_id
+    #         db_session.commit()
+    #         db_session.close()
+
+    
+    # The deactivation step of transfer_inventory might be redundant for this case
+    # as the failed partner has assumedly already deactivated all of its inventory
+
+    # sync_inventory(relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
+    background_tasks.add_task(post_recovery, relinquished_ids, deactivated_keys, unchanged_deactivated_data, backup_server_id, failed_server_id)
+    # background_tasks.add_task(sync_inventory, relinquished_ids, deactivated_keys, backup_server_id, failed_server_id)
+    return {"Status": "Queued: Begin Operating"}
 
 @app.put("/reset")
 def reset():

@@ -102,7 +102,8 @@ def write_to_primary(model, query_filters, values):
 
             for key in values:
                 setattr(new_obj, key, values[key])
-            
+            # Setting last modified date for optimization of recovery process
+            setattr(new_obj, 'last_modified_date', datetime.utcnow())
             db_session.add(new_obj)
             db_session.commit()
             new_objs.append(new_obj.as_dict())
@@ -383,7 +384,7 @@ def receive_heartbeat():
 
 @app.get("/status")
 def server_status():
-    return {"status": retrieve_registry("Status", None)}
+    return {"status": retrieve_registry("Status", None), "last_heartbeat": retrieve_registry("Last_Heartbeat", None)}
 
 @app.put("/disable")
 def server_disable():
@@ -483,8 +484,9 @@ async def update_all_inventory(request: Request):
             db_session.add(inv_obj)
         for key in item.keys():
             setattr(inv_obj, key, item[key])
+        setattr(inv_obj, "last_modified_date", None)
         # Do I need to commit here ?
-    db_session.commit() 
+        db_session.commit() 
     db_session.close()
     print("Inventory updated/created!")
     return {"Status": "Updated"} 
@@ -517,6 +519,7 @@ def retrieve_orchestrator_servers():
 
 @app.put("/inventory/deactivate")
 def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: int = 0):
+    return_dict = {"Status": "Deactivated"}
     # transaction_id = generate_random_string(TRANSACT_ID_LENGTH)
     # server_id = retrieve_registry("Server_ID", None)
     # partner_id = retrieve_registry("Partner_ID", None)
@@ -542,10 +545,19 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
                                        Inventory.id.in_(ids)).all()
     else:
         # Send only the IDs (will this be too big?)
+        last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
         deactivated_inventory = db_session.query(Inventory.id).filter(Inventory.location == new_location,
                                        Inventory.id.in_(ids)).all()
-        deactivated_inventory = [record[0] for record in deactivated_inventory]
         
+        # return list of inventory ids that haven't been changed since the last heartbeat was received
+        unchanged_deactivated_data = db_session.query(Inventory.id).filter(Inventory.location == new_location, 
+                                                                           Inventory.id.in_(ids),
+                                                                          (Inventory.last_modified_date < last_heartbeat | Inventory.last_modified_date == None)).all()
+        deactivated_inventory = [record[0] for record in deactivated_inventory]
+        unchanged_deactivated_data = [record[0] for record in unchanged_deactivated_data]
+        return_dict["unchanged_deactivated_data"] = unchanged_deactivated_data
+
+       
     # else:
     # # Any AVAILABLE inventory currently on THIS server_id should be changed to location 0 AND have last_modified_by field update to transaction ID
     # # Also deactivate any inventory NOT owned by this server (regardless of status)
@@ -557,14 +569,17 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
 
     # result_query = db_session.query(Inventory.id).filter(Inventory.location == 0, Inventory.id.in_(ids)).all()
     # reserved_ids = [r[0] for r in result_query]
-
-    return {"Status": "Deactivated", "deactivated_inventory": deactivated_inventory}
+    return_dict["deactivated_inventory"] = deactivated_inventory
+    return return_dict
 
 @app.put("/inventory/activate")
-async def activate_inventory(request: Request):
+async def activate_inventory(request: Request, new_location: int = None):
     json_data = await request.json()
     db_session.query(Inventory).filter(Inventory.id.in_(json_data), Inventory.committed == False).delete(synchronize_session=False)
-    db_session.query(Inventory).filter(Inventory.id.in_(json_data), Inventory.committed == True).update({Inventory.activated: True}, synchronize_session=False)
+    if new_location:
+        db_session.query(Inventory).filter(Inventory.id.in_(json_data), Inventory.committed == True).update({Inventory.activated: True, Inventory.location: new_location}, synchronize_session=False)
+    else:
+        db_session.query(Inventory).filter(Inventory.id.in_(json_data), Inventory.committed == True).update({Inventory.activated: True}, synchronize_session=False)
     db_session.commit()
     db_session.close()
     return {"Status": "Activated"}
@@ -626,7 +641,7 @@ def buy_inventory(ids: List[int], background_tasks: BackgroundTasks):
     
     else:
         try:
-            tentative_data = write_to_primary(Inventory, (Inventory.id.in_(ids), Inventory.availability == 'Available', Inventory.location == server_id), { 'transaction_id': transaction_id, 'availability': 'Reserved' })
+            tentative_data = write_to_primary(Inventory, (Inventory.id.in_(ids), Inventory.availability == 'Available', Inventory.location == server_id), { 'transaction_id': transaction_id, 'availability': 'Reserved', 'solo_mode': True })
             uncomitted_ids = [obj['id'] for obj in tentative_data]
             commits_applied = apply_to_primary(Inventory, (Inventory.id.in_(uncomitted_ids),))
             if not commits_applied:
