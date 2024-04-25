@@ -128,6 +128,7 @@ def update_authority():
     db_session.query(Inventory).filter(Inventory.location == partner_id).update({Inventory.location: server_id}, synchronize_session = False)
     db_session.commit()
     db_session.close()
+    store_registry("Partner_ID", None)
     return True
 
 def attempt_recovery(relinquished_ids):
