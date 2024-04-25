@@ -543,6 +543,7 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
         apply_to_primary(Inventory, [Inventory.id.in_(ids)])
         deactivated_inventory = db_session.query(Inventory).filter(Inventory.location == new_location,
                                        Inventory.id.in_(ids)).all()
+        return_dict["deactivated_inventory"] = deactivated_inventory
     else:
         # Send only the IDs (will this be too big?)
         last_heartbeat = retrieve_registry("Last_Heartbeat", datetime.utcnow())
@@ -555,6 +556,7 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
                                                                           ((Inventory.last_modified_date < last_heartbeat) | (Inventory.last_modified_date == None))).all()
         deactivated_inventory = [record[0] for record in deactivated_inventory]
         unchanged_deactivated_data = [record[0] for record in unchanged_deactivated_data]
+        return_dict["deactivated_inventory"] = deactivated_inventory
         return_dict["unchanged_deactivated_data"] = unchanged_deactivated_data
 
        
@@ -569,7 +571,6 @@ def deactivate_inventory(ids: List[int], send_data: bool = False, new_location: 
 
     # result_query = db_session.query(Inventory.id).filter(Inventory.location == 0, Inventory.id.in_(ids)).all()
     # reserved_ids = [r[0] for r in result_query]
-    return_dict["deactivated_inventory"] = deactivated_inventory
     return return_dict
 
 @app.put("/inventory/activate")
@@ -754,6 +755,8 @@ def get_item_status(item_id: int):
     dirty_inventory = db_session.query(Inventory).filter(Inventory.id == item_id, Inventory.location != server_id).first()
     if dirty_inventory:
         ext_server = db_session.query(Server).filter(Server.id == dirty_inventory.location).first()
+        if not ext_server:
+            raise HTTPException(status_code=404, detail="Item not found")
         url_slug = f'http://{ext_server.ip_address}:{ext_server.port}/inventory/{item_id}'
         response = RedirectResponse(url=url_slug)
         return response
