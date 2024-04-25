@@ -377,7 +377,8 @@ async def update_all_servers(request: Request):
 def receive_heartbeat():
     request_time = datetime.utcnow()
     status = retrieve_registry("Status")
-    if status == 'Disabled':
+    partner_id = retrieve_registry("Partner_ID", 0)
+    if status == 'Disabled' or partner_id == 0:
         raise HTTPException(status_code=503, detail="Service unavailable")
     store_registry("Last_Heartbeat", request_time)
     return {"status": "Success", "received": request_time}
