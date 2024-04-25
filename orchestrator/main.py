@@ -310,13 +310,14 @@ def post_recovery(relinquished_ids, deactivated_ids, unchanged_deactivated_ids, 
     # Optimized reactivation: Reactivate keys that haven't been changed since the timeout
     print("post_recovery: Re-activating unchanged inventory (Optimized)")
     unchanged_relinquished_ids = common_elements(unchanged_deactivated_ids, relinquished_ids)
-    unchanged_remaining_ids = list_difference(deactivated_ids, unchanged_relinquished_ids)
+    unchanged_remaining_ids = list_difference(unchanged_deactivated_ids, unchanged_relinquished_ids)
     print("Length of unchanged_relinquished_ids: " + str(len(unchanged_relinquished_ids)))
     print("Length of unchanged_remaining_ids: " + str(len(unchanged_remaining_ids)))
 
     print("post_recovery: Resynchronizing conflicting inventory")
     reactivate_clean_data(src_server_id, dest_server_id, dest_server_id, unchanged_relinquished_ids)
     reactivate_clean_data(src_server_id, dest_server_id, src_server_id, unchanged_remaining_ids)
+    
     remaining_ids = list_difference(deactivated_ids, unchanged_deactivated_ids)
     remaining_relinquished_ids = list_difference(relinquished_ids, unchanged_relinquished_ids)
     print("Length of remaining_ids: " + str(len(remaining_ids)))
