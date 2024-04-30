@@ -480,15 +480,17 @@ def send_and_activate(destination_server_id, inventory_ids):
 
     CURR_SERV_IP = curr_serv.ip_address
     CURR_SERV_PORT = curr_serv.port
-    s_backup = None
 
-    # This is None if curr_serv has no partner
+    s_backup = requests.Session()
+    s_current = requests.Session()
+
+     # This is None if curr_serv has no partner
     if backup_serv:
         BACK_SERV_IP = backup_serv.ip_address
         BACK_SERV_PORT = backup_serv.port
+    else:
+        s_backup.close()
 
-    # s_backup = requests.Session()
-    # s_current = requests.Session()
     curr_idx = 0
     # Setting inventory to new worker node location
     db_session.query(Inventory).filter(Inventory.id.in_(inventory_ids), Inventory.location == 0).update({Inventory.location: destination_server_id}, synchronize_session=False)
@@ -504,24 +506,24 @@ def send_and_activate(destination_server_id, inventory_ids):
         # Backup_serv is not transient (db close is above this)
         if BACK_SERV_IP:
             back_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/update'
-            # upd_response = s_backup.put(back_url, json = chunk_data)
-            upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
+            upd_response = s_backup.put(back_url, json = chunk_data)
+            # upd_response = requests.request("PUT", back_url, headers={}, json = chunk_data)
             backup_response = (upd_response.ok)
         # sending data chunk to primary
         print(f'Sending chunk of length {len(chunk_data)}: with keys [{chunk[0]} ... {chunk[len(chunk)-1]}]')
         curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/update'
-        # upd_response = s_current.put(curr_url, json = chunk_data)
-        upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
+        upd_response = s_current.put(curr_url, json = chunk_data)
+        # upd_response = requests.request("PUT", curr_url, headers={}, json = chunk_data)
         
         # If unactivated data successfully received by primary (& backup if applicable), send activate command
         if backup_response:
             curr_url = f'http://{BACK_SERV_IP}:{BACK_SERV_PORT}/inventory/activate'
-            # active_resp = s_backup.put(curr_url, json = chunk)
-            active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
+            active_resp = s_backup.put(curr_url, json = chunk)
+            # active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
         if upd_response.ok:
             curr_url = f'http://{CURR_SERV_IP}:{CURR_SERV_PORT}/inventory/activate'
-            # active_resp = s_current.put(curr_url, json = chunk)
-            active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
+            active_resp = s_current.put(curr_url, json = chunk)
+            # active_resp = requests.request("PUT", curr_url, headers={}, json = chunk)
             # If activate command received, update DB to reflect activation status
             if active_resp.ok:
                 chunk_query.update({Inventory.activated: True}, synchronize_session=False)
