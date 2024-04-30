@@ -475,9 +475,9 @@ async def prepare_inventory_commits(request: Request):
 async def update_all_inventory(request: Request):
     json_data = await request.json()
     print(json_data)
-    # inv_ids = [obj['id'] for obj in json_data]
-    # db_session.query(Inventory).filter(Inventory.id.in_(inv_ids), Inventory.committed == False).delete(synchronize_session=False)
-    # db_session.commit()
+    inv_ids = [obj['id'] for obj in json_data]
+    db_session.query(Inventory).filter(Inventory.id.in_(inv_ids), Inventory.committed == False).delete(synchronize_session=False)
+    db_session.commit()
     for item in json_data:
         inv_obj = db_session.query(Inventory).filter(Inventory.id == item['id'], Inventory.committed == True).first()
         if not inv_obj:
